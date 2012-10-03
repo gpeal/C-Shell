@@ -161,15 +161,19 @@ void getCommandLine(char** buf, int size)
 
   isReading = TRUE;
   while (((ch = getc(stdin)) != EOF) && (ch != '\n'))
-    {
-      if (used == size)
-        {
-          size *= 2;
-          cmd = realloc(cmd, sizeof(char) * (size + 1));
-        }
-      cmd[used] = ch;
-      used++;
-      cmd[used] = '\0';
-    }
+  {
+    if (used == size)
+      {
+        size *= 2;
+        cmd = realloc(cmd, sizeof(char) * (size + 1));
+      }
+    cmd[used] = ch;
+    used++;
+    cmd[used] = '\0';
+  }
+
+  if (ch == EOF)
+    forceExit = TRUE;
+
   isReading = FALSE;
 } /* getCommandLine */
