@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Interpreter 
+ *  Title: Interpreter
  * -------------------------------------------------------------------------
  *    Purpose: Interprets a command line
  *    Author: Stefan Birrer
@@ -60,8 +60,7 @@
  *    Input: a command line
  *    Output: void
  ***********************************************************************/
-EXTERN void
-Interpret(char*);
+EXTERN void Interpret(char*);
 
 /************External Declaration*****************************************/
 

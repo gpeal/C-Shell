@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Runtime environment 
+ *  Title: Runtime environment
  * -------------------------------------------------------------------------
  *    Purpose: Runs commands
  *    Author: Stefan Birrer
@@ -82,8 +82,7 @@ VAREXTERN(bool forceExit, FALSE)
  *    Input: a command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void
-RunCmd(commandT*);
+EXTERN void RunCmd(commandT*);
 
 /***********************************************************************
  *  Title: Runs a command in background
@@ -92,8 +91,7 @@ RunCmd(commandT*);
  *    Input: a command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void
-RunCmdBg(commandT*);
+EXTERN void RunCmdBg(commandT*);
 
 /***********************************************************************
  *  Title: Runs two command with a pipe
@@ -102,8 +100,7 @@ RunCmdBg(commandT*);
  *    Input: two command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void
-RunCmdPipe(commandT*, commandT*);
+EXTERN void RunCmdPipe(commandT*, commandT*);
 
 /***********************************************************************
  *  Title: Runs two command with output redirection
@@ -112,8 +109,7 @@ RunCmdPipe(commandT*, commandT*);
  *    Input: a command structure structure and a file name
  *    Output: void
  ***********************************************************************/
-EXTERN void
-RunCmdRedirOut(commandT*, char*);
+EXTERN void RunCmdRedirOut(commandT*, char*);
 
 /***********************************************************************
  *  Title: Runs two command with input redirection
@@ -122,8 +118,7 @@ RunCmdRedirOut(commandT*, char*);
  *    Input: a command structure structure and a file name
  *    Output: void
  ***********************************************************************/
-EXTERN void
-RunCmdRedirIn(commandT*, char*);
+EXTERN void RunCmdRedirIn(commandT*, char*);
 
 /***********************************************************************
  *  Title: Stop the foreground process
@@ -132,8 +127,7 @@ RunCmdRedirIn(commandT*, char*);
  *    Input: void
  *    Output: void
  ***********************************************************************/
-EXTERN void
-StopFgProc();
+EXTERN void StopFgProc();
 /***********************************************************************
  *  Title: Create a command structure
  * ---------------------------------------------------------------------
@@ -141,8 +135,7 @@ StopFgProc();
  *    Input: the number of arguments
  *    Output: the command structure
  ***********************************************************************/
-EXTERN commandT*
-CreateCmdT(int);
+EXTERN commandT* CreateCmdT(int);
 
 /***********************************************************************
  *  Title: Release a command structure
@@ -151,8 +144,7 @@ CreateCmdT(int);
  *    Input: the command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void
-ReleaseCmdT(commandT**);
+EXTERN void ReleaseCmdT(commandT**);
 
 /***********************************************************************
  *  Title: Get the current working directory
@@ -161,8 +153,7 @@ ReleaseCmdT(commandT**);
  *    Input: void
  *    Output: a string containing the current working directory
  ***********************************************************************/
-EXTERN char*
-getCurrentWorkingDir();
+EXTERN char* getCurrentWorkingDir();
 
 /***********************************************************************
  *  Title: Get user name
@@ -171,8 +162,7 @@ getCurrentWorkingDir();
  *    Input: void
  *    Output: a string containing the user name
  ***********************************************************************/
-EXTERN char*
-getLogin();
+EXTERN char* getLogin();
 
 /***********************************************************************
  *  Title: Check the jobs
@@ -181,8 +171,7 @@ getLogin();
  *    Input: void
  *    Output: void
  ***********************************************************************/
-EXTERN void
-CheckJobs();
+EXTERN void CheckJobs();
 
 /************External Declaration*****************************************/
 

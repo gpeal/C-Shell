@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Runtime environment 
+ *  Title: Runtime environment
  * -------------------------------------------------------------------------
  *    Purpose: Runs commands
  *    Author: Stefan Birrer
@@ -81,23 +81,17 @@ bgjobL *bgjobs = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
-static void
-RunCmdFork(commandT*, bool);
+static void RunCmdFork(commandT*, bool);
 /* runs an external program command after some checks */
-static void
-RunExternalCmd(commandT*, bool);
+static void RunExternalCmd(commandT*, bool);
 /* resolves the path and checks for exutable flag */
-static bool
-ResolveExternalCmd(commandT*);
+static bool ResolveExternalCmd(commandT*);
 /* forks and runs a external program */
-static void
-Exec(commandT*, bool);
+static void Exec(commandT*, bool);
 /* runs a builtin command */
-static void
-RunBuiltInCmd(commandT*);
+static void RunBuiltInCmd(commandT*);
 /* checks whether a command is a builtin command */
-static bool
-IsBuiltIn(char*);
+static bool IsBuiltIn(char*);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -113,8 +107,7 @@ IsBuiltIn(char*);
  *
  * Runs the given command.
  */
-void
-RunCmd(commandT* cmd)
+void RunCmd(commandT* cmd)
 {
   RunCmdFork(cmd, TRUE);
 } /* RunCmd */
@@ -132,8 +125,7 @@ RunCmd(commandT* cmd)
  * Runs a command, switching between built-in and external mode
  * depending on cmd->argv[0].
  */
-void
-RunCmdFork(commandT* cmd, bool fork)
+void RunCmdFork(commandT* cmd, bool fork)
 {
   if (cmd->argc <= 0)
     return;
@@ -158,8 +150,7 @@ RunCmdFork(commandT* cmd, bool fork)
  *
  * Runs a command in the background.
  */
-void
-RunCmdBg(commandT* cmd)
+void RunCmdBg(commandT* cmd)
 {
   // TODO
 } /* RunCmdBg */
@@ -177,8 +168,7 @@ RunCmdBg(commandT* cmd)
  * Runs two commands, redirecting standard output from the first to
  * standard input on the second.
  */
-void
-RunCmdPipe(commandT* cmd1, commandT* cmd2)
+void RunCmdPipe(commandT* cmd1, commandT* cmd2)
 {
 } /* RunCmdPipe */
 
@@ -194,8 +184,7 @@ RunCmdPipe(commandT* cmd1, commandT* cmd2)
  *
  * Runs a command, redirecting standard output to a file.
  */
-void
-RunCmdRedirOut(commandT* cmd, char* file)
+void RunCmdRedirOut(commandT* cmd, char* file)
 {
 } /* RunCmdRedirOut */
 
@@ -211,8 +200,7 @@ RunCmdRedirOut(commandT* cmd, char* file)
  *
  * Runs a command, redirecting a file to standard input.
  */
-void
-RunCmdRedirIn(commandT* cmd, char* file)
+void RunCmdRedirIn(commandT* cmd, char* file)
 {
 }  /* RunCmdRedirIn */
 
@@ -228,8 +216,7 @@ RunCmdRedirIn(commandT* cmd, char* file)
  *
  * Tries to run an external command.
  */
-static void
-RunExternalCmd(commandT* cmd, bool fork)
+static void RunExternalCmd(commandT* cmd, bool fork)
 {
   if (ResolveExternalCmd(cmd))
     Exec(cmd, fork);
@@ -246,8 +233,7 @@ RunExternalCmd(commandT* cmd, bool fork)
  *
  * Determines whether the command to be run actually exists.
  */
-static bool
-ResolveExternalCmd(commandT* cmd)
+static bool ResolveExternalCmd(commandT* cmd)
 {
   return FALSE;
 } /* ResolveExternalCmd */
@@ -264,8 +250,7 @@ ResolveExternalCmd(commandT* cmd)
  *
  * Executes a command.
  */
-static void
-Exec(commandT* cmd, bool forceFork)
+static void Exec(commandT* cmd, bool forceFork)
 {
 } /* Exec */
 
@@ -282,8 +267,7 @@ Exec(commandT* cmd, bool forceFork)
  * Checks whether the given string corresponds to a supported built-in
  * command.
  */
-static bool
-IsBuiltIn(char* cmd)
+static bool IsBuiltIn(char* cmd)
 {
   return FALSE;
 } /* IsBuiltIn */
@@ -299,8 +283,7 @@ IsBuiltIn(char* cmd)
  *
  * Runs a built-in command.
  */
-static void
-RunBuiltInCmd(commandT* cmd)
+static void RunBuiltInCmd(commandT* cmd)
 {
 } /* RunBuiltInCmd */
 
@@ -314,7 +297,6 @@ RunBuiltInCmd(commandT* cmd)
  *
  * Checks the status of running jobs.
  */
-void
-CheckJobs()
+void CheckJobs()
 {
 } /* CheckJobs */

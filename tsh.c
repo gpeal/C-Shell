@@ -1,7 +1,7 @@
 /***************************************************************************
  *  Title: tsh
  * -------------------------------------------------------------------------
- *    Purpose: A simple shell implementation 
+ *    Purpose: A simple shell implementation
  *    Author: Stefan Birrer
  *    Version: $Revision: 1.4 $
  *    Last Modification: $Date: 2009/10/12 20:50:12 $
@@ -34,8 +34,7 @@
 
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */
-static void
-sig(int);
+static void sig(int);
 
 /************External Declaration*****************************************/
 
@@ -52,8 +51,7 @@ sig(int);
  *
  * This sets up signal handling and implements the main loop of tsh.
  */
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   /* Initialize command buffer */
   char* cmdLine = malloc(sizeof(char*) * BUFSIZE);
@@ -65,20 +63,20 @@ main(int argc, char *argv[])
     PrintPError("SIGTSTP");
 
   while (!forceExit) /* repeat forever */
-    {
-      /* read command line */
-      getCommandLine(&cmdLine, BUFSIZE);
+  {
+    /* read command line */
+    getCommandLine(&cmdLine, BUFSIZE);
 
-      /* checks the status of background jobs */
-      CheckJobs();
+    /* checks the status of background jobs */
+    CheckJobs();
 
-      /* interpret command and line
-       * includes executing of commands */
-      Interpret(cmdLine);
+    /* interpret command and line
+     * includes executing of commands */
+    Interpret(cmdLine);
 
-      if (strcmp(cmdLine, "exit") == 0)
-        forceExit = TRUE;
-    }
+    if (strcmp(cmdLine, "exit") == 0)
+      forceExit = TRUE;
+  }
 
   /* shell termination */
   free(cmdLine);
@@ -95,7 +93,6 @@ main(int argc, char *argv[])
  *
  * This should handle signals sent to tsh.
  */
-static void
-sig(int signo)
+static void sig(int signo)
 {
 } /* sig */

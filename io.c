@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Input/Output 
+ *  Title: Input/Output
  * -------------------------------------------------------------------------
  *    Purpose: Handles the input and output
  *    Author: Stefan Birrer
@@ -77,8 +77,7 @@ bool isReading = FALSE;
  *
  * Prints a newline to stdout.
  */
-void
-PrintNewline()
+void PrintNewline()
 {
   putchar('\n');
 } /* PrintNewLine */
@@ -94,8 +93,7 @@ PrintNewline()
  *
  * Prints the string to standard output.
  */
-void
-Print(char* msg)
+void Print(char* msg)
 {
   assert(msg != NULL);
   puts(msg);
@@ -112,8 +110,7 @@ Print(char* msg)
  *
  * Formats and prints the given string as an error message.
  */
-void
-PrintPError(char* msg)
+void PrintPError(char* msg)
 {
   char* format = "%s: %s";
   char str[MAXLINE];
@@ -136,8 +133,7 @@ PrintPError(char* msg)
  *
  * Returns whether the isReading flag is set.
  */
-bool
-IsReading()
+bool IsReading()
 {
   return isReading;
 } /* IsReading */
@@ -156,8 +152,7 @@ IsReading()
  * Reads from standard input until it sees a newline or EOF. Stores
  * the string that was read at *buf.
  */
-void
-getCommandLine(char** buf, int size)
+void getCommandLine(char** buf, int size)
 {
   char ch;
   size_t used = 0;

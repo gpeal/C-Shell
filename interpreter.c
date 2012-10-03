@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Input 
+ *  Title: Input
  * -------------------------------------------------------------------------
  *    Purpose: Handles the input from stdin
  *    Author: Stefan Birrer
@@ -70,11 +70,9 @@ int MAXARGS = 100;
 
 /**************Function Prototypes******************************************/
 
-commandT*
-getCommand(char* cmdLine);
+commandT* getCommand(char* cmdLine);
 
-void
-freeCommand(commandT* cmd);
+void freeCommand(commandT* cmd);
 
 /**************Implementation***********************************************/
 
@@ -90,8 +88,7 @@ freeCommand(commandT* cmd);
  * This is the high-level function called by tsh's main to interpret a
  * command line.
  */
-void
-Interpret(char* cmdLine)
+void Interpret(char* cmdLine)
 {
   int i = 0;
   commandT* cmd = getCommand(cmdLine);
@@ -101,7 +98,7 @@ Interpret(char* cmdLine)
     {
       printf("#%d|%s|\n", i, cmd->argv[i]);
     }
-  
+
   freeCommand(cmd);
 } /* Interpret */
 
@@ -122,8 +119,7 @@ Interpret(char* cmdLine)
  * This function tokenizes the input, preserving quoted strings. It
  * supports escaping quotes and the escape character, '\'.
  */
-commandT*
-getCommand(char* cmdLine)
+commandT* getCommand(char* cmdLine)
 {
   commandT* cmd = malloc(sizeof(commandT) + sizeof(char*) * MAXARGS);
   cmd->argv[0] = 0;
@@ -261,8 +257,7 @@ getCommand(char* cmdLine)
  * This function frees all the memory associated with the given
  * commandT struct, before freeing the struct's memory itself.
  */
-void
-freeCommand(commandT* cmd)
+void freeCommand(commandT* cmd)
 {
   int i;
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Title: Input/Output 
+ *  Title: Input/Output
  * -------------------------------------------------------------------------
  *    Purpose: Handles the input and output
  *    Author: Stefan Birrer
@@ -65,8 +65,7 @@
  *    Input: a string
  *    Output: void
  ***********************************************************************/
-EXTERN void
-Print(char*);
+EXTERN void Print(char*);
 
 /***********************************************************************
  *  Title: Print a newline
@@ -75,8 +74,7 @@ Print(char*);
  *    Input: void
  *    Output: void
  ***********************************************************************/
-EXTERN void
-PrintNewline();
+EXTERN void PrintNewline();
 
 /***********************************************************************
  *  Title: Print a error message
@@ -85,8 +83,7 @@ PrintNewline();
  *    Input: a message
  *    Output: void
  ***********************************************************************/
-EXTERN void
-PrintPError(char*);
+EXTERN void PrintPError(char*);
 
 /***********************************************************************
  *  Title: Checks whether input is read from stdin
@@ -95,8 +92,7 @@ PrintPError(char*);
  *    Input: void
  *    Output: true if reading
  ***********************************************************************/
-EXTERN bool
-IsReading();
+EXTERN bool IsReading();
 
 /***********************************************************************
  *  Title: Read one command line from stdin
@@ -106,8 +102,7 @@ IsReading();
  *    Input: pointer to the buffer (will be resized as necessary) & size
  *    Output: void
  ***********************************************************************/
-EXTERN void
-getCommandLine(char**, int);
+EXTERN void getCommandLine(char**, int);
 
 /************External Declaration*****************************************/
 
