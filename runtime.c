@@ -277,7 +277,6 @@ static void ResolveExternalCmd(commandT* cmd)
     }
   }
   *cmd->name = '\0';
-  *cmd->argv[0] = '\0';
   return;
 } /* ResolveExternalCmd */
 
@@ -336,6 +335,12 @@ static void Exec(commandT* cmd, bool forceFork)
  */
 static bool IsBuiltIn(char* cmd)
 {
+  if (strchr(cmd, '='))
+    return TRUE;
+  else if (!strcmp(cmd, "echo"))
+    return TRUE;
+  else if (!strcmp(cmd, "cd"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -352,6 +357,29 @@ static bool IsBuiltIn(char* cmd)
  */
 static void RunBuiltInCmd(commandT* cmd)
 {
+  char *tmp;
+  if (strchr(cmd->name, '='))
+    putenv(cmd->name);
+  else if(!strcmp(cmd->argv[0], "echo"))
+  {
+    if (cmd->argc > 1)
+    {
+      if (cmd->argv[1][0] == '$')
+      {
+        tmp = getenv(cmd->argv[1] + sizeof(char));
+        printf("%s\n", tmp);
+      }
+      else
+        printf("%s\n", cmd->argv[1]);
+    }
+  }
+  else if(!strcmp(cmd->argv[0], "cd"))
+  {
+    if (cmd->argc > 1)
+    {
+      chdir(cmd->argv[1]);
+    }
+  }
 } /* RunBuiltInCmd */
 
 

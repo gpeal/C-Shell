@@ -98,12 +98,12 @@ void Interpret(char* cmdLine)
   commandT* cmd = getCommand(cmdLine);
 
   RunCmd(cmd);
-  printf("cmd: %s\n", cmd->name);
+  /*printf("cmd: %s\n", cmd->name);
   printf("argc: %d\n", cmd->argc);
   for (i = 0; cmd->argv[i] != 0; i++)
   {
     printf("#%d|%s|\n", i, cmd->argv[i]);
-  }
+  }*/
 
   freeCommand(cmd);
 } /* Interpret */
