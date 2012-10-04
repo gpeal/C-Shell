@@ -94,7 +94,6 @@ void parsePath(char **paths[], int *pathsc);
  */
 void Interpret(char* cmdLine)
 {
-  int i = 0;
   commandT* cmd = getCommand(cmdLine);
 
   RunCmd(cmd);

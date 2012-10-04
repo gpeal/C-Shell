@@ -111,6 +111,7 @@ static int fileExists(char *path);
  */
 void RunCmd(commandT* cmd)
 {
+  fflush(stdout);
   RunCmdFork(cmd, TRUE);
 } /* RunCmd */
 
@@ -377,7 +378,8 @@ static void RunBuiltInCmd(commandT* cmd)
   {
     if (cmd->argc > 1)
     {
-      chdir(cmd->argv[1]);
+      if(chdir(cmd->argv[1]))
+        PrintPError("Error Changing Directories");
     }
   }
 } /* RunBuiltInCmd */

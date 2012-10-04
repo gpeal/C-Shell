@@ -159,7 +159,7 @@ void getCommandLine(char** buf, int size)
   char* cmd = *buf;
   cmd[0] = '\0';
 
-  printf("%s> ", SHELLNAME);
+  //printf("%s> ", SHELLNAME);
 
   isReading = TRUE;
   while (((ch = getc(stdin)) != EOF) && (ch != '\n'))
