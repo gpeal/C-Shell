@@ -295,6 +295,30 @@ static void ResolveExternalCmd(commandT* cmd)
  */
 static void Exec(commandT* cmd, bool forceFork)
 {
+  pid_t child;
+  int status;
+  if (forceFork)
+  {
+      child = fork();
+      if (child >= 0)
+      {
+        if (child) //parent process
+        {
+          waitpid(child, &status, 0);
+        }
+        else //child process
+        {
+          status = execv(cmd->name, cmd->argv);
+          exit(status);
+        }
+    }
+    else
+      PrintPError("Fork Failed\n");
+  }
+  else
+  {
+    status = execv(cmd->name, cmd->argv);
+  }
 } /* Exec */
 
 
