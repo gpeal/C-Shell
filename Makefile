@@ -18,8 +18,8 @@
 ###############################################################################
 
 # handin info
-TEAM = `gpe300`
-VERSION = `date +%Y%m%d%H%M%S`
+TEAM = gpe300
+VERSION = `date +'%Y%m%d%H%M%S'`
 PROJ = tsh
 
 CC = gcc
