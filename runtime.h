@@ -70,8 +70,7 @@ typedef struct command_t
  * ---------------------------------------------------------------------
  *    Purpose: Signals that a program exit is required
  ***********************************************************************/
-VAREXTERN(bool forceExit, FALSE)
-;
+VAREXTERN(bool forceExit, FALSE);
 
 /************Function Prototypes******************************************/
 

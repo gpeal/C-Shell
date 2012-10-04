@@ -85,13 +85,15 @@ static void RunCmdFork(commandT*, bool);
 /* runs an external program command after some checks */
 static void RunExternalCmd(commandT*, bool);
 /* resolves the path and checks for exutable flag */
-static bool ResolveExternalCmd(commandT*);
+static void ResolveExternalCmd(commandT* cmd);
 /* forks and runs a external program */
 static void Exec(commandT*, bool);
 /* runs a builtin command */
 static void RunBuiltInCmd(commandT*);
 /* checks whether a command is a builtin command */
 static bool IsBuiltIn(char*);
+/* checks whether or not a file exists */
+static int fileExists(char *path);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -218,7 +220,8 @@ void RunCmdRedirIn(commandT* cmd, char* file)
  */
 static void RunExternalCmd(commandT* cmd, bool fork)
 {
-  if (ResolveExternalCmd(cmd))
+  ResolveExternalCmd(cmd);
+  if (cmd->name)
     Exec(cmd, fork);
 }  /* RunExternalCmd */
 
@@ -229,13 +232,53 @@ static void RunExternalCmd(commandT* cmd, bool fork)
  * arguments:
  *   commandT *cmd: the command to be run
  *
- * returns: bool: whether the given command exists
+ * returns: none
  *
  * Determines whether the command to be run actually exists.
+ * If the command does not exist, cmd->name and cmd->argv[0] are set to NULL
  */
-static bool ResolveExternalCmd(commandT* cmd)
+static void ResolveExternalCmd(commandT* cmd)
 {
-  return FALSE;
+  int exists = fileExists(cmd->name);
+  int i = 0, pathLength = 0;
+  char *envPath;
+  char tmp[128];
+
+  if (exists && strchr(cmd->name, '/'))
+  {
+    return;
+  }
+  else if (exists)
+  {
+    sprintf(cmd->name, "./%s", cmd->name);
+    return;
+  }
+  else //check path
+  {
+    envPath = getenv("PATH");
+    while(envPath[i]) {
+      while(envPath[++i] && envPath[i] != ':')
+        pathLength++;
+      strncpy(tmp, envPath + i - pathLength, pathLength);
+      tmp[pathLength] = '\0';
+
+      if (tmp[pathLength - 1] == '/')
+        sprintf(tmp, "%s%s", tmp, cmd->name);
+      else
+        sprintf(tmp, "%s/%s", tmp, cmd->name);
+      if (fileExists(tmp)) {
+        strcpy(cmd->name, tmp);
+        return;
+      }
+
+      pathLength = 0;
+      if (!envPath[i-1])
+        break;
+    }
+  }
+  *cmd->name = '\0';
+  *cmd->argv[0] = '\0';
+  return;
 } /* ResolveExternalCmd */
 
 
@@ -300,3 +343,24 @@ static void RunBuiltInCmd(commandT* cmd)
 void CheckJobs()
 {
 } /* CheckJobs */
+
+/*
+ * fileExists
+ *
+ * arguments char *path: path to a file
+ *
+ * returns: 1 if exists 0 if doesn't
+ *
+ * This function returns whether or not a file exists
+ */
+static int fileExists(char *path)
+{
+  FILE *file = fopen(path, "r");
+  if (file)
+  {
+    fclose(file);
+    return 1;
+  }
+  else
+    return 0;
+}
