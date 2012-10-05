@@ -133,13 +133,13 @@ void RunCmdFork(commandT* cmd, bool fork)
   if (cmd->argc <= 0)
     return;
   if (IsBuiltIn(cmd->argv[0]))
-    {
-      RunBuiltInCmd(cmd);
-    }
+  {
+    RunBuiltInCmd(cmd);
+  }
   else
-    {
-      RunExternalCmd(cmd, fork);
-    }
+  {
+    RunExternalCmd(cmd, fork);
+  }
 } /* RunCmdFork */
 
 
@@ -222,8 +222,7 @@ void RunCmdRedirIn(commandT* cmd, char* file)
 static void RunExternalCmd(commandT* cmd, bool fork)
 {
   ResolveExternalCmd(cmd);
-  if (cmd->name)
-    Exec(cmd, fork);
+  Exec(cmd, fork);
 }  /* RunExternalCmd */
 
 
@@ -251,6 +250,9 @@ static void ResolveExternalCmd(commandT* cmd)
   }
   else if (exists)
   {
+    strcpy(tmp, cmd->name);
+    free(cmd->name);
+    cmd->name = malloc((strlen(tmp) + 2) * sizeof(char));
     sprintf(cmd->name, "./%s", cmd->name);
     return;
   }
@@ -268,16 +270,29 @@ static void ResolveExternalCmd(commandT* cmd)
       else
         sprintf(tmp, "%s/%s", tmp, cmd->name);
       if (fileExists(tmp)) {
+        if (strlen(tmp) > strlen(cmd->name))
+        {
+          free(cmd->name);
+          cmd->name = malloc(strlen(tmp) * sizeof(char));
+        }
         strcpy(cmd->name, tmp);
         return;
       }
-
       pathLength = 0;
       if (!envPath[i-1])
         break;
     }
   }
-  *cmd->name = '\0';
+
+  if (cmd->name[0] != '.' && cmd->name[1] != '/')
+  {
+    //append ./ at the beginning
+    strcpy(tmp, cmd->name);
+    free(cmd->name);
+    cmd->name = malloc((strlen(tmp) + 2) * sizeof(char));
+    sprintf(cmd->name, "./%s", tmp);
+  }
+  cmd->argc = 0;
   return;
 } /* ResolveExternalCmd */
 
@@ -296,26 +311,30 @@ static void ResolveExternalCmd(commandT* cmd)
 static void Exec(commandT* cmd, bool forceFork)
 {
   pid_t child;
-  int status;
+  int status = -1;
   if (forceFork)
   {
       child = fork();
       if (child >= 0)
       {
-        if (child) //parent process
+        if (child > 0) //parent process
         {
           waitpid(child, &status, 0);
+          status = WEXITSTATUS(status);
         }
         else //child process
         {
-          status = execv(cmd->name, cmd->argv);
+          if(cmd->argc > 0)
+            status = execv(cmd->name, cmd->argv);
+          else
+            printf("%s: No such file or directory.", cmd->name);
           exit(status);
         }
     }
     else
       PrintPError("Fork Failed\n");
   }
-  else
+  else // no fork
   {
     status = execv(cmd->name, cmd->argv);
   }
@@ -368,7 +387,10 @@ static void RunBuiltInCmd(commandT* cmd)
       if (cmd->argv[1][0] == '$')
       {
         tmp = getenv(cmd->argv[1] + sizeof(char));
-        printf("%s\n", tmp);
+        if (tmp)
+          printf("%s\n", tmp);
+        else
+          printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
       }
       else
         printf("%s\n", cmd->argv[1]);

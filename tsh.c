@@ -70,12 +70,13 @@ int main(int argc, char *argv[])
     /* checks the status of background jobs */
     CheckJobs();
 
+    if (strcmp(cmdLine, "exit") == 0)
+      break;
+
     /* interpret command and line
      * includes executing of commands */
     Interpret(cmdLine);
 
-    if (strcmp(cmdLine, "exit") == 0)
-      forceExit = TRUE;
   }
 
   /* shell termination */
