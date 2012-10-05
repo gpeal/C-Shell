@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 /************Private include**********************************************/
 #include "tsh.h"
@@ -35,6 +39,8 @@
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */
 static void sig(int);
+/* loads ~/.tshrc file */
+static void initTshRC();
 
 /************External Declaration*****************************************/
 
@@ -61,6 +67,8 @@ int main(int argc, char *argv[])
     PrintPError("SIGINT");
   if (signal(SIGTSTP, sig) == SIG_ERR)
     PrintPError("SIGTSTP");
+
+  initTshRC();
 
   while (!forceExit) /* repeat forever */
   {
@@ -99,3 +107,21 @@ static void sig(int signo)
   if (signo == SIGINT)
     PrintPError("SIGINT");
 } /* sig */
+
+static void initTshRC()
+{
+  char lineBuffer[128], rcPath[128];
+  struct passwd *pw = getpwuid(getuid());
+  char *homedir = pw->pw_dir;
+  sprintf(rcPath, "%s/.tshrc", homedir);
+
+  FILE *file = fopen(rcPath, "r");
+  if (!file)
+    return;
+
+  while(fgets(lineBuffer, 128, file) != NULL)
+  {
+    lineBuffer[strlen(lineBuffer) - 1] = '\0';
+    Interpret(lineBuffer);
+  }
+} /* initTshRC */
