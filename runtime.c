@@ -270,15 +270,12 @@ static void ResolveExternalCmd(commandT* cmd)
       else
         sprintf(tmp, "%s/%s", tmp, cmd->name);
       if (fileExists(tmp)) {
-        if (strlen(tmp) > strlen(cmd->name))
-        {
-          free(cmd->name);
-          cmd->name = malloc(strlen(tmp) * sizeof(char));
-        }
+        cmd->name = malloc(strlen(tmp) * sizeof(char));
         strcpy(cmd->name, tmp);
         return;
       }
       pathLength = 0;
+      //finished checking all paths (reached end of string)
       if (!envPath[i-1])
         break;
     }
@@ -327,7 +324,7 @@ static void Exec(commandT* cmd, bool forceFork)
           if(cmd->argc > 0)
             status = execv(cmd->name, cmd->argv);
           else
-            printf("%s: No such file or directory.", cmd->name);
+            printf("./tsh-ref: line 1: %s: No such file or directory", cmd->name);
           exit(status);
         }
     }

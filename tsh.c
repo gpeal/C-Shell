@@ -121,6 +121,7 @@ static void initTshRC()
 
   while(fgets(lineBuffer, 128, file) != NULL)
   {
+    //fgets includes the \n so remove it
     lineBuffer[strlen(lineBuffer) - 1] = '\0';
     Interpret(lineBuffer);
   }
