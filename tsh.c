@@ -60,7 +60,7 @@ static void initTshRC();
 int main(int argc, char *argv[])
 {
   /* Initialize command buffer */
-  char* cmdLine = malloc(sizeof(char*) * BUFSIZE);
+  char *cmdLine = malloc(sizeof(char*) * BUFSIZE);
 
   /* shell initialization */
   if (signal(SIGINT, sig) == SIG_ERR)
