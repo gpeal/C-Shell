@@ -164,7 +164,8 @@ void getCommandLine(char** buf, int size)
   cmd[0] = '\0';
 
   promptName = getPromptName();
-  printf("%s> ", promptName);
+  if (promptName)
+    printf("%s", promptName);
   free(promptName);
 
   isReading = TRUE;
@@ -208,19 +209,19 @@ char *getPromptName() {
       else if(PSX[PSX_i] == 'u')
       {
         strcpy(promptName + promptName_i, getenv("USER"));
-        promptName_i = strlen(promptName) + 1;
+        promptName_i = strlen(promptName);
       }
       else if(PSX[PSX_i] == 'h')
       {
         gethostname(tmp, 64);
         strcpy(promptName + promptName_i, tmp);
-        promptName_i = strlen(promptName) + 1;
+        promptName_i = strlen(promptName);
       }
       else if(PSX[PSX_i] == 'w')
       {
         getcwd(tmp, 64);
         strcpy(promptName + promptName_i, tmp);
-        promptName_i = strlen(promptName) + 1;
+        promptName_i = strlen(promptName);
       }
       else if(PSX[PSX_i] == 't')
       {
@@ -228,22 +229,21 @@ char *getPromptName() {
         timeInfo = localtime(&rawtime);
         strftime(tmp, 64, "%H:%M:%S", timeInfo);
         strcpy(promptName + promptName_i, tmp);
-        promptName_i = strlen(promptName) + 1;
+        promptName_i = strlen(promptName);
       }
       else
       {
         PSX[PSX_i] = '\\';
-        PSX[PSX_i + 1] = '\0';
         promptName_i++;
       }
     }
     else
     {
       promptName[promptName_i] = PSX[PSX_i];
-      promptName[promptName_i + 1] = '\0';
       promptName_i++;
     }
     PSX_i++;
   }
+  promptName[promptName_i] = '\0';
   return promptName;
 }
