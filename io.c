@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <assert.h>
+#include <time.h>
 
 /************Private include**********************************************/
 #include "io.h"
@@ -62,6 +63,8 @@
 bool isReading = FALSE;
 
 /************Function Prototypes******************************************/
+
+char *getPromptName();
 
 /************External Declaration*****************************************/
 
@@ -157,9 +160,12 @@ void getCommandLine(char** buf, int size)
   char ch;
   size_t used = 0;
   char* cmd = *buf;
+  char *promptName;
   cmd[0] = '\0';
 
-  //printf("%s> ", SHELLNAME);
+  promptName = getPromptName();
+  printf("%s> ", promptName);
+  free(promptName);
 
   isReading = TRUE;
   while (((ch = getc(stdin)) != EOF) && (ch != '\n'))
@@ -179,3 +185,65 @@ void getCommandLine(char** buf, int size)
 
   isReading = FALSE;
 } /* getCommandLine */
+
+char *getPromptName() {
+  char *PSX = getenv("PSX");
+  int PSX_i = 0;
+  char *promptName = malloc(128 * sizeof(char));
+  int promptName_i = 0;
+  char tmp[64];
+  time_t rawtime;
+  struct tm *timeInfo;
+
+  if (!PSX)
+    return NULL;
+
+  while (PSX[PSX_i])
+  {
+    if (PSX[PSX_i] == '\\')
+    {
+      PSX_i++;
+      if (!PSX[PSX_i])
+        continue;
+      else if(PSX[PSX_i] == 'u')
+      {
+        strcpy(promptName + promptName_i, getenv("USER"));
+        promptName_i = strlen(promptName) + 1;
+      }
+      else if(PSX[PSX_i] == 'h')
+      {
+        gethostname(tmp, 64);
+        strcpy(promptName + promptName_i, tmp);
+        promptName_i = strlen(promptName) + 1;
+      }
+      else if(PSX[PSX_i] == 'w')
+      {
+        getcwd(tmp, 64);
+        strcpy(promptName + promptName_i, tmp);
+        promptName_i = strlen(promptName) + 1;
+      }
+      else if(PSX[PSX_i] == 't')
+      {
+        time(&rawtime);
+        timeInfo = localtime(&rawtime);
+        strftime(tmp, 64, "%H:%M:%S", timeInfo);
+        strcpy(promptName + promptName_i, tmp);
+        promptName_i = strlen(promptName) + 1;
+      }
+      else
+      {
+        PSX[PSX_i] = '\\';
+        PSX[PSX_i + 1] = '\0';
+        promptName_i++;
+      }
+    }
+    else
+    {
+      promptName[promptName_i] = PSX[PSX_i];
+      promptName[promptName_i + 1] = '\0';
+      promptName_i++;
+    }
+    PSX_i++;
+  }
+  return promptName;
+}

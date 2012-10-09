@@ -94,6 +94,8 @@ static void RunBuiltInCmd(commandT*);
 static bool IsBuiltIn(char*);
 /* checks whether or not a file exists */
 static int fileExists(char *path);
+/* sets an environment variable using strcpy */
+static void setEnvVar(commandT* cmd);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -375,8 +377,16 @@ static bool IsBuiltIn(char* cmd)
 static void RunBuiltInCmd(commandT* cmd)
 {
   char *tmp;
+  int putenvRet;
   if (strchr(cmd->name, '='))
-    putenv(cmd->name);
+  {
+    /*putenvRet = putenv(cmd->name);
+    if(putenvRet)
+      PrintPError("Error setting env\n");*/
+    if (cmd->name[0] == 'P' && cmd->name[1] == 'S' && cmd->name[2] == '1' && cmd->name[3] == '=')
+      cmd->name[2] = 'X';
+    setEnvVar(cmd);
+  }
   else if(!strcmp(cmd->argv[0], "echo"))
   {
     if (cmd->argc > 1)
@@ -398,10 +408,16 @@ static void RunBuiltInCmd(commandT* cmd)
     if (cmd->argc > 1)
     {
       if(chdir(cmd->argv[1]))
-        PrintPError("Error Changing Directories");
+        PrintPError("Error Changing Directories\n");
     }
   }
 } /* RunBuiltInCmd */
+
+static void setEnvVar(commandT* cmd) {
+  char *str = malloc(64 * sizeof(char));
+  strcpy(str, cmd->argv[0]);
+  putenv(str);
+}
 
 
 /*
