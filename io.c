@@ -219,9 +219,11 @@ char *getPromptName() {
       }
       else if(PSX[PSX_i] == 'w')
       {
-        getcwd(tmp, 64);
-        strcpy(promptName + promptName_i, tmp);
-        promptName_i = strlen(promptName);
+        if (getcwd(tmp, 64))
+        {
+          strcpy(promptName + promptName_i, tmp);
+          promptName_i = strlen(promptName);
+        }
       }
       else if(PSX[PSX_i] == 't')
       {

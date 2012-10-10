@@ -94,7 +94,7 @@ void parsePath(char **paths[], int *pathsc);
  */
 void Interpret(char* cmdLine)
 {
-  int i;
+  //int i;
   commandT* cmd = getCommand(cmdLine);
 
   /*printf("cmd: %s\n", cmd->name);

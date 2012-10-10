@@ -307,7 +307,6 @@ static void Exec(commandT* cmd, bool forceFork)
 {
   pid_t child;
   int status = -1;
-  bgjobL *newJob;
 
   if (forceFork)
   {
@@ -324,8 +323,8 @@ static void Exec(commandT* cmd, bool forceFork)
         {
           if(cmd->argc > 0)
             status = execv(cmd->name, cmd->argv);
-          //else
-          //  printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
+          else if (cmd->argc == 0)
+            printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
           exit(status);
         }
     }
@@ -359,6 +358,8 @@ static bool IsBuiltIn(char* cmd)
     return TRUE;
   else if (!strcmp(cmd, "cd"))
     return TRUE;
+  else if (!strcmp(cmd, "exit"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -376,17 +377,13 @@ static bool IsBuiltIn(char* cmd)
 static void RunBuiltInCmd(commandT* cmd)
 {
   char *tmp;
-  int putenvRet;
   if (strchr(cmd->name, '='))
   {
-    /*putenvRet = putenv(cmd->name);
-    if(putenvRet)
-      PrintPError("Error setting env\n");*/
     if (cmd->name[0] == 'P' && cmd->name[1] == 'S' && cmd->name[2] == '1' && cmd->name[3] == '=')
       cmd->name[2] = 'X';
     setEnvVar(cmd);
   }
-  else if(!strcmp(cmd->argv[0], "echo"))
+  else if (!strcmp(cmd->argv[0], "echo"))
   {
     if (cmd->argc > 1)
     {
@@ -402,13 +399,18 @@ static void RunBuiltInCmd(commandT* cmd)
         printf("%s\n", cmd->argv[1]);
     }
   }
-  else if(!strcmp(cmd->argv[0], "cd"))
+  else if (!strcmp(cmd->argv[0], "cd"))
   {
     if (cmd->argc > 1)
     {
       if(chdir(cmd->argv[1]))
         PrintPError("Error Changing Directories\n");
     }
+  }
+  else if (!strcmp(cmd->argv[0], "exit"))
+  {
+    forceExit = 2478;
+    return;
   }
 } /* RunBuiltInCmd */
 
@@ -445,7 +447,7 @@ int StopFgProc()
 {
   int ret;
   if (!fgJobPid)
-    return;
+    return -1;
 
   ret = kill(fgJobPid, SIGINT);
   if (ret == 0)
