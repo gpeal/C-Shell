@@ -37,8 +37,6 @@
 /************Global Variables*********************************************/
  extern bgjobL *bgjobs;
 
-
-
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */
 static void sig(int);
@@ -64,6 +62,7 @@ int main(int argc, char *argv[])
 {
   /* Initialize command buffer */
   char *cmdLine = malloc(sizeof(char*) * BUFSIZE);
+  printf("MAIN CALLED\n");
 
   /* shell initialization */
   if (signal(SIGINT, sig) == SIG_ERR)

@@ -42,7 +42,7 @@ if [ ! -f Makefile -a ! -f makefile ]; then
 	echo;
 fi;
 
-# Setup the environment
+# Setup the environment 
 cd ${TMP} || { cleanUp; exit 1; }
 sh ${TC_DIR}/setup.sh;
 cp ${TC_DIR}/${SDRIVER} .;
@@ -94,7 +94,7 @@ for tc in ${BASIC_TESTS}; do
 			./${SDRIVER} -t ${TC_DIR}/${tc}.in -s ./${ORIG} > ${OUTPUT}/${tc}.orig 2>&1;
 #                        cp ${OUTPUT}/${tc}.orig ${TC_DIR}/${tc}.out;
 		else
-			${TC_DIR}/${ORIG} ${ARGS} > ${OUTPUT}/${tc}.orig 2>&1;
+			${TC_DIR}/${ORIG} ${ARGS} > ${OUTPUT}/${tc}.orig 2>&1;		
 		fi
 	fi
 
@@ -145,7 +145,7 @@ for tc in ${EXTRA_TESTS}; do
                         ./${SDRIVER} -t ${TC_DIR}/${tc}.in -s ${TC_DIR}/${ORIG} > ${OUTPUT}/${tc}.orig 2>&1;
 #                        cp ${OUTPUT}/${tc}.orig ${TC_DIR}/${tc}.out;
 		else
-			${TC_DIR}/${ORIG} ${ARGS} > ${OUTPUT}/${tc}.orig 2>&1;
+			${TC_DIR}/${ORIG} ${ARGS} > ${OUTPUT}/${tc}.orig 2>&1;		
 		fi
 	fi
 
@@ -201,7 +201,7 @@ else
 		else
 			valgrind -v --tool=memcheck --show-reachable=yes --leak-check=yes ./${BIN} ${ARGS} > ${OUTPUT}/${tc}.valgrind 2>&1;
 	    fi
-
+		
 		if [[ -n ${VERBOSE} ]]; then
 			cat ${OUTPUT}/${tc}.valgrind;
 		fi;
@@ -228,7 +228,7 @@ else
 	echo "${STILL_REACHABLE} still reachable";
 fi;
 
-
+	
 #Clean up
 sh ${TC_DIR}/remove_extra.sh;
 cleanUp;
