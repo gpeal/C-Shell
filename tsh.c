@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     Interpret(cmdLine);
 
   }
-
+  fflush(stdout);
   /* shell termination */
   free(cmdLine);
   return 0;
@@ -108,7 +108,7 @@ static void sig(int signo)
   {
     while (bgjobs)
     {
-      kill(bgjobs->pid, signo);
+      kill(-1 * bgjobs->pid, signo);
       bgjobs = bgjobs->next;
     }
     StopFgProc();

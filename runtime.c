@@ -321,6 +321,8 @@ static void Exec(commandT* cmd, bool forceFork)
         }
         else //child process
         {
+          if (setpgid(0, 0) != 0)
+            PrintPError("Error setting child gid\n");
           if(cmd->argc > 0)
             status = execv(cmd->name, cmd->argv);
           else if (cmd->argc == 0)
@@ -409,7 +411,9 @@ static void RunBuiltInCmd(commandT* cmd)
   }
   else if (!strcmp(cmd->argv[0], "exit"))
   {
-    forceExit = 2478;
+    if (getenv("PSX"))
+      printf("exit\n");
+    forceExit = TRUE;
     return;
   }
 } /* RunBuiltInCmd */
@@ -449,7 +453,7 @@ int StopFgProc()
   if (!fgJobPid)
     return -1;
 
-  ret = kill(fgJobPid, SIGINT);
+  ret = kill(-1 * fgJobPid, SIGINT);
   if (ret == 0)
     fgJobPid = 0;
 
