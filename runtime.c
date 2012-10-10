@@ -70,14 +70,10 @@
 
 #define NBUILTINCOMMANDS (sizeof BuiltInCommands / sizeof(char*))
 
-typedef struct bgjob_l
-{
-  pid_t pid;
-  struct bgjob_l* next;
-} bgjobL;
-
 /* the pids of the background processes */
 bgjobL *bgjobs = NULL;
+
+int fgJobPid = 0;
 
 /************Function Prototypes******************************************/
 /* run command */
@@ -311,6 +307,8 @@ static void Exec(commandT* cmd, bool forceFork)
 {
   pid_t child;
   int status = -1;
+  bgjobL *newJob;
+
   if (forceFork)
   {
       child = fork();
@@ -318,6 +316,7 @@ static void Exec(commandT* cmd, bool forceFork)
       {
         if (child > 0) //parent process
         {
+          fgJobPid = child;
           waitpid(child, &status, 0);
           status = WEXITSTATUS(status);
         }
@@ -325,8 +324,8 @@ static void Exec(commandT* cmd, bool forceFork)
         {
           if(cmd->argc > 0)
             status = execv(cmd->name, cmd->argv);
-          else
-            printf("./tsh-ref: line 1: %s: No such file or directory", cmd->name);
+          //else
+          //  printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
           exit(status);
         }
     }
@@ -432,6 +431,28 @@ static void setEnvVar(commandT* cmd) {
 void CheckJobs()
 {
 } /* CheckJobs */
+
+/*
+ * StopFgProc
+ *
+ * arguments: none
+ *
+ * returns: none
+ *
+ * Kills the fg process if there is one
+ */
+int StopFgProc()
+{
+  int ret;
+  if (!fgJobPid)
+    return;
+
+  ret = kill(fgJobPid, SIGINT);
+  if (ret == 0)
+    fgJobPid = 0;
+
+  return ret;
+}
 
 /*
  * fileExists

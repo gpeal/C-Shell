@@ -63,6 +63,12 @@ typedef struct command_t
   char* argv[];
 } commandT;
 
+typedef struct bgjob_l
+{
+  pid_t pid;
+  struct bgjob_l* next;
+} bgjobL;
+
 /************Global Variables*********************************************/
 
 /***********************************************************************
@@ -124,9 +130,9 @@ EXTERN void RunCmdRedirIn(commandT*, char*);
  * ---------------------------------------------------------------------
  *    Purpose: Stops the current foreground process if there is any.
  *    Input: void
- *    Output: void
+ *    Output: errno
  ***********************************************************************/
-EXTERN void StopFgProc();
+EXTERN int StopFgProc();
 /***********************************************************************
  *  Title: Create a command structure
  * ---------------------------------------------------------------------

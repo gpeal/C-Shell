@@ -35,6 +35,9 @@
 #define BUFSIZE 80
 
 /************Global Variables*********************************************/
+ extern bgjobL *bgjobs;
+
+
 
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */
@@ -104,8 +107,16 @@ int main(int argc, char *argv[])
  */
 static void sig(int signo)
 {
-  if (signo == SIGINT)
-    PrintPError("SIGINT");
+  if (signo == SIGINT || signo == SIGTERM)
+  {
+    while (bgjobs)
+    {
+      kill(bgjobs->pid, signo);
+      bgjobs = bgjobs->next;
+    }
+    StopFgProc();
+    exit(0);
+  }
 } /* sig */
 
 static void initTshRC()
@@ -121,6 +132,8 @@ static void initTshRC()
 
   while(fgets(lineBuffer, 128, file) != NULL)
   {
+    if (lineBuffer[0] == '#')
+      continue;
     //fgets includes the \n so remove it
     lineBuffer[strlen(lineBuffer) - 1] = '\0';
     Interpret(lineBuffer);
