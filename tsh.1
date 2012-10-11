@@ -1,19 +1,25 @@
 .\" Process this file with
 .\" groff -man -Tascii tsh.1
 .\"
-.TH TSH 1 "OCTOBER 2009" "NU EECS 343" "NU EECS 343 - Operating Systems - Fall 2009"
+.TH TSH 1 "OCTOBER 2012" "NU EECS 343" "NU EECS 343 - Operating Systems - Fall 2012"
 .SH NAME
 tsh \- A tiny shell
 .SH SYNOPSIS
 .B tsh
 .SH DESCRIPTION
-.B tsh
-description... Include the features that you implemented
+.B tsh is an alternative shell written by Gabriel Peal that mimics much of the functionality of bash. In its current state, it can run any binary files by calling either their relative location or calling a binary on the PATH. tsh also has some built in functions (see below)
 .SH BUILT-IN COMMANDS
 .IP exit
 Quit tsh
+.IP echo
+Redirects the arguments to stdout. An environment variable can be redirected by preceding it with '$'.
+.IP cd
+Change the current directory
+.IP Env
+tsh can set environment variables by using the same syntax as bash (ex. "VAR=foo")
+.IP PS1
+A user can reformat the command prompt name by setting the PS1 environment variable. \u is replaced with the current users username. \h is replaced with the first part of the computers hostname. \w is replaced with the current working directory. \t is replaced with the current time down to the second. (ex. PS1="[nu@nh:nw] nt % " will make the prompt look something like [fabianb@fabiansbox:/home/fabianb/tshell1] 23:14:16 %)
 .SH DESIGN APPROACH
-Write about your design approach, challenges, and whether you went for
-the extra credit here.
+When the user enters a command, it is first converted to a commandT* data structure that contains the arguments and each of their parameters slit into an array. tsh then checks the command to see if it is built in (see above). If it is built in, it executes it and returns. If the command is not built in, it searches for a binary relative to the current directory (this can include subfolders). If it is not found, it checks to see if the path is an absolute path relative to root. If it is not, it checks every path in the PATH environment variable for the binary and executes that. When found, tsh executes the binary in a forked process and the parent waits for the child to die before continuing. This implementation of tsh does include the extra credit. Immediately after loading, it checks ~/.tshrc for a text file. If it is found, it loads every line that does not start with a # and interprets it as if the user had entered it. tsh also supports custom prompts using the PS1 environment variable (see above).
 .SH AUTHOR
-Your names, netids and emails here
+Gabriel Peal, gpeal@u.northwestern.edu, gpe300
