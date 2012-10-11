@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+# On Ubuntu, /bin/sh is dash. dash can't run this file.
 
 source ./config.test;
 
@@ -18,7 +19,10 @@ chmod go-rwx ${SRCDIR} ${TMP} ${OUTPUT} || exit 1;
 function cleanUp()
 {
 	rm -Rf ${SRCDIR} ${TMP} ${OUTPUT};
+	sh ${TC_DIR}/remove_extra.sh;
 }
+
+trap 'cleanUp; exit 1' 2
 
 echo "Testing ${TARGZ}";
 echo;
@@ -230,6 +234,5 @@ fi;
 
 	
 #Clean up
-sh ${TC_DIR}/remove_extra.sh;
 cleanUp;
 

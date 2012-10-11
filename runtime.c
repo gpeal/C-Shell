@@ -307,6 +307,7 @@ static void Exec(commandT* cmd, bool forceFork)
 {
   pid_t child;
   int status = -1;
+  int pid = 0;
 
   if (forceFork)
   {
@@ -316,7 +317,10 @@ static void Exec(commandT* cmd, bool forceFork)
         if (child > 0) //parent process
         {
           fgJobPid = child;
-          waitpid(child, &status, 0);
+          do
+          {
+            pid = waitpid(child, &status, 0);
+          } while (pid > 0);
           status = WEXITSTATUS(status);
         }
         else //child process

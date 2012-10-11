@@ -193,6 +193,7 @@ char *getPromptName() {
   char *promptName = malloc(128 * sizeof(char));
   int promptName_i = 0;
   char tmp[64];
+  char *tmp2;
   time_t rawtime;
   struct tm *timeInfo;
 
@@ -214,6 +215,9 @@ char *getPromptName() {
       else if(PSX[PSX_i] == 'h')
       {
         gethostname(tmp, 64);
+        tmp2 = strchr(tmp, '.');
+        if (tmp2)
+          *tmp2 = '\0';
         strcpy(promptName + promptName_i, tmp);
         promptName_i = strlen(promptName);
       }
