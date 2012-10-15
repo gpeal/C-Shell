@@ -36,7 +36,7 @@
 
 /************Global Variables*********************************************/
  extern bgjobL *bgjobs;
-
+ 
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */
 static void sig(int);
@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
  * returns: none
  *
  * This should handle signals sent to tsh.
+ * for INT or TERM, it will kill all background jobs and the foreground job
  */
 static void sig(int signo)
 {
@@ -114,6 +115,18 @@ static void sig(int signo)
     StopFgProc();
   }
 } /* sig */
+
+/*
+ * initTshRC
+ *
+ * arguments: none
+ *
+ * returns: none
+ *
+ * initTshRC will parse ~/.tshrc and run each line in it as if it were typed into tsh
+ * All lines that begin with '#' are treated as comments
+ * initTshRC will fail silently in the case that tshrc does not exist
+ */
 
 static void initTshRC()
 {

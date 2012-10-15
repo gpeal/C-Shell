@@ -94,15 +94,7 @@ void parsePath(char **paths[], int *pathsc);
  */
 void Interpret(char* cmdLine)
 {
-  //int i;
   commandT* cmd = getCommand(cmdLine);
-
-  /*printf("cmd: %s\n", cmd->name);
-  printf("argc: %d\n", cmd->argc);
-  for (i = 0; cmd->argv[i] != 0; i++)
-  {
-    printf("#%d|%s|\n", i, cmd->argv[i]);
-  }*/
   RunCmd(cmd);
 
   freeCommand(cmd);

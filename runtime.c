@@ -281,12 +281,13 @@ static void ResolveExternalCmd(commandT* cmd)
 
   if (cmd->name[0] != '.' && cmd->name[1] != '/')
   {
-    //append ./ at the beginning
+    // append ./ at the beginning
     strcpy(tmp, cmd->name);
     free(cmd->name);
     cmd->name = malloc((strlen(tmp) + 2) * sizeof(char));
     sprintf(cmd->name, "./%s", tmp);
   }
+  // command could not be found. Set argc to 0 as a red flag for later
   cmd->argc = 0;
   return;
 } /* ResolveExternalCmd */
@@ -312,9 +313,9 @@ static void Exec(commandT* cmd, bool forceFork)
   if (forceFork)
   {
       child = fork();
-      if (child >= 0)
+      if (child >= 0) // fork succeeded
       {
-        if (child > 0) //parent process
+        if (child > 0) // parent process
         {
           fgJobPid = child;
           do
@@ -323,10 +324,12 @@ static void Exec(commandT* cmd, bool forceFork)
           } while (pid > 0);
           status = WEXITSTATUS(status);
         }
-        else //child process
+        else // child process
         {
+          // set the group id to the pid so it can be killed properly
           if (setpgid(0, 0) != 0)
             PrintPError("Error setting child gid\n");
+          // if the command could not be resolved, argc is set to 0
           if(cmd->argc > 0)
             status = execv(cmd->name, cmd->argv);
           else if (cmd->argc == 0)
@@ -384,11 +387,7 @@ static void RunBuiltInCmd(commandT* cmd)
 {
   char *tmp;
   if (strchr(cmd->name, '='))
-  {
-    if (cmd->name[0] == 'P' && cmd->name[1] == 'S' && cmd->name[2] == '1' && cmd->name[3] == '=')
-      cmd->name[2] = 'X';
     setEnvVar(cmd);
-  }
   else if (!strcmp(cmd->argv[0], "echo"))
   {
     if (cmd->argc > 1)
@@ -415,7 +414,7 @@ static void RunBuiltInCmd(commandT* cmd)
   }
   else if (!strcmp(cmd->argv[0], "exit"))
   {
-    if (getenv("PSX"))
+    if (getenv("PS1"))
       printf("exit\n");
     forceExit = TRUE;
     return;

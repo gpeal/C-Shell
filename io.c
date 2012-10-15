@@ -187,9 +187,21 @@ void getCommandLine(char** buf, int size)
   isReading = FALSE;
 } /* getCommandLine */
 
+/*
+ * getPromptName
+ *
+ * arguments: none
+ *
+ * returns:
+ *   char *promptName: the string that will be displayed before the command prompt
+ *
+ *  getPromptName will parse the PS1 environment variable and return a string to be displayed
+ *  at the beginning of every command prompt.
+ */
+
 char *getPromptName() {
-  char *PSX = getenv("PSX");
-  int PSX_i = 0;
+  char *PS1 = getenv("PS1");
+  int PS1_i = 0;
   char *promptName = malloc(128 * sizeof(char));
   int promptName_i = 0;
   char tmp[64];
@@ -197,22 +209,22 @@ char *getPromptName() {
   time_t rawtime;
   struct tm *timeInfo;
 
-  if (!PSX)
+  if (!PS1)
     return NULL;
 
-  while (PSX[PSX_i])
+  while (PS1[PS1_i])
   {
-    if (PSX[PSX_i] == '\\')
+    if (PS1[PS1_i] == '\\')
     {
-      PSX_i++;
-      if (!PSX[PSX_i])
+      PS1_i++;
+      if (!PS1[PS1_i])
         continue;
-      else if(PSX[PSX_i] == 'u')
+      else if(PS1[PS1_i] == 'u')
       {
         strcpy(promptName + promptName_i, getenv("USER"));
         promptName_i = strlen(promptName);
       }
-      else if(PSX[PSX_i] == 'h')
+      else if(PS1[PS1_i] == 'h')
       {
         gethostname(tmp, 64);
         tmp2 = strchr(tmp, '.');
@@ -221,7 +233,7 @@ char *getPromptName() {
         strcpy(promptName + promptName_i, tmp);
         promptName_i = strlen(promptName);
       }
-      else if(PSX[PSX_i] == 'w')
+      else if(PS1[PS1_i] == 'w')
       {
         if (getcwd(tmp, 64))
         {
@@ -229,7 +241,7 @@ char *getPromptName() {
           promptName_i = strlen(promptName);
         }
       }
-      else if(PSX[PSX_i] == 't')
+      else if(PS1[PS1_i] == 't')
       {
         time(&rawtime);
         timeInfo = localtime(&rawtime);
@@ -239,16 +251,16 @@ char *getPromptName() {
       }
       else
       {
-        PSX[PSX_i] = '\\';
+        PS1[PS1_i] = '\\';
         promptName_i++;
       }
     }
     else
     {
-      promptName[promptName_i] = PSX[PSX_i];
+      promptName[promptName_i] = PS1[PS1_i];
       promptName_i++;
     }
-    PSX_i++;
+    PS1_i++;
   }
   promptName[promptName_i] = '\0';
   return promptName;
