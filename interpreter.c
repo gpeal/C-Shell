@@ -223,21 +223,31 @@ commandT* getCommand(char* cmdLine)
     }
   // End the final argument, if any.
   if (tmpLen > 0)
-    {
-      //printf("\t\tend of argument %d, got:%s\n", cmd.argc, tmp);
-      cmd->argv[cmd->argc] = malloc(sizeof(char) * (tmpLen + 1));
-      strcpy(cmd->argv[cmd->argc], tmp);
+  {
+    //printf("\t\tend of argument %d, got:%s\n", cmd.argc, tmp);
+    cmd->argv[cmd->argc] = malloc(sizeof(char) * (tmpLen + 1));
+    strcpy(cmd->argv[cmd->argc], tmp);
 
-      inArg = 0;
-      tmp[0] = 0;
-      tmpLen = 0;
-      cmd->argc++;
-      cmd->argv[cmd->argc] = 0;
-    }
+    inArg = 0;
+    tmp[0] = 0;
+    tmpLen = 0;
+    cmd->argc++;
+    cmd->argv[cmd->argc] = 0;
+  }
 
   free(tmp);
 
   cmd->name = cmd->argv[0];
+
+  // determine whether it is a background job or not
+  if (strcmp(cmd->argv[cmd->argc - 1], "&") == 0)
+  {
+    free(cmd->argv[cmd->argc - 1]);
+    (cmd->argc)--;
+    cmd->bg = 1;
+  }
+  else
+    cmd->bg = 0;
 
   return cmd;
 } /* getCommand */

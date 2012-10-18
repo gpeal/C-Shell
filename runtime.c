@@ -128,6 +128,8 @@ void RunCmd(commandT* cmd)
  */
 void RunCmdFork(commandT* cmd, bool fork)
 {
+  int i;
+  commandT *cmd2;
   if (cmd->argc <= 0)
     return;
   if (IsBuiltIn(cmd->argv[0]))
@@ -136,6 +138,50 @@ void RunCmdFork(commandT* cmd, bool fork)
   }
   else
   {
+    if (cmd->bg)
+    {
+      RunCmdBg(cmd);
+      return;
+    }
+    else 
+    {
+      for(i = 0; cmd->argv[i] != 0; i++)
+      {
+        if (strcmp(cmd->argv[i], "|") == 0)
+        {
+          //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
+          cmd2 = malloc(sizeof(commandT));
+          cmd2->argc = cmd->argc - i;
+          *cmd2->argv = cmd->argv[i + 1];
+          //terminate cmd argv prior to the pipe
+          cmd->argc = i;
+          free(cmd->argv[i]);
+          cmd->argv[i] = 0;
+          RunCmdPipe(cmd, cmd2);
+          return;
+        }
+        else if(strcmp(cmd->argv[i], ">") == 0)
+        {
+          cmd->argc = i;
+          free(cmd->argv[i]);
+          cmd->argv[i] = 0;
+          RunCmdRedirOut(cmd, cmd->argv[i + 1]);
+          //free the file name because freeCmd won't do it anymore
+          free(cmd->argv[i + 1]);
+          return;
+        }
+        else if(strcmp(cmd->argv[i], "<") == 0)
+        {
+          cmd->argc = i;
+          free(cmd->argv[i]);
+          cmd->argv[i] = 0;
+          RunCmdRedirIn(cmd, cmd->argv[i + 1]);
+          //free the file name because freeCmd won't do it anymore
+          free(cmd->argv[i + 1]);
+          return;
+        }
+      }
+    }
     RunExternalCmd(cmd, fork);
   }
 } /* RunCmdFork */
