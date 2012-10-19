@@ -164,8 +164,10 @@ void getCommandLine(char** buf, int size)
   cmd[0] = '\0';
 
   promptName = getPromptName();
-  if (promptName)
+  if (promptName) 
+  {
     printf("%s", promptName);
+  }
   free(promptName);
 
   isReading = TRUE;
@@ -202,7 +204,7 @@ void getCommandLine(char** buf, int size)
 char *getPromptName() {
   char *PS1 = getenv("PS1");
   int PS1_i = 0;
-  char *promptName = malloc(128 * sizeof(char));
+  char *promptName;
   int promptName_i = 0;
   char tmp[64];
   char *tmp2;
@@ -211,6 +213,8 @@ char *getPromptName() {
 
   if (!PS1)
     return NULL;
+
+  promptName = malloc(128 * sizeof(char));
 
   while (PS1[PS1_i])
   {
