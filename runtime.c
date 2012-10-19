@@ -314,7 +314,7 @@ static void ResolveExternalCmd(commandT* cmd)
       else
         sprintf(tmp, "%s/%s", tmp, cmd->name);
       if (fileExists(tmp)) {
-        cmd->name = malloc(strlen(tmp) * sizeof(char));
+        cmd->name = malloc(strlen(tmp) * sizeof(char) + 1);
         strcpy(cmd->name, tmp);
         return;
       }
