@@ -268,6 +268,11 @@ void freeCommand(commandT* cmd)
 {
   int i;
 
+  if (cmd->name != cmd->argv[0])
+  {
+      free(cmd->name);
+  }
+
   cmd->name = 0;
   for (i = 0; cmd->argv[i] != 0; i++)
     {
