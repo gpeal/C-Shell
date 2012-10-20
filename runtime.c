@@ -92,6 +92,10 @@ static bool IsBuiltIn(char*);
 static int fileExists(char *path);
 /* sets an environment variable using strcpy */
 static void setEnvVar(commandT* cmd);
+/* adds a pid to the bg job list  */
+static void AddBgJob(pid_t pid);
+/* removes a pid from the bg job list */
+static void RmBgJob(pid_t pid);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -199,7 +203,34 @@ void RunCmdFork(commandT* cmd, bool fork)
  */
 void RunCmdBg(commandT* cmd)
 {
-  // TODO
+  pid_t child;
+  int status = -1;
+
+  if ((child = fork()) == 0)
+  {
+    // child TODO: refactor this as it duplicates code in Exec
+    // set the group id to the pid so it can be killed properly
+    if(setpgid(0,0) != 0)
+      PrintPError("Error setting child gid\n");
+    
+    // if the command could not be resolved, argc is set to 0
+    if(cmd->argc > 0)
+      status = execv(cmd->name, cmd->argv);
+    else if (cmd->argc == 0)
+      printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
+    exit(status);
+  }
+  else if (child > 0)
+  {
+    // parent
+    AddBgJob(child);
+    printf("Bg job: %x\n", child);
+  }
+  else 
+  {
+    // error
+    PrintPError("Fork Failed\n");
+  }
 } /* RunCmdBg */
 
 
@@ -415,6 +446,8 @@ static bool IsBuiltIn(char* cmd)
     return TRUE;
   else if (!strcmp(cmd, "exit"))
     return TRUE;
+  else if (!strcmp(cmd, "jobs"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -464,6 +497,18 @@ static void RunBuiltInCmd(commandT* cmd)
       printf("exit\n");
     forceExit = TRUE;
     return;
+  }
+  else if (!strcmp(cmd->argv[0], "jobs"))
+  {
+    int i = 0;
+    bgjobL* job_i = bgjobs;
+
+    while(job_i != NULL)
+      {
+	printf("[%x] Pid: %x\n", i, job_i->pid);
+	job_i = job_i->next;
+	i++;
+      }
   }
 } /* RunBuiltInCmd */
 
@@ -529,3 +574,51 @@ static int fileExists(char *path)
   else
     return 0;
 }
+
+/*
+ * AddBgJob
+ *
+ * arguments pid_t pid: pid of bg process
+ *
+ * returns: none
+ * 
+ * This function adds the pid to the end of the bg job list
+ *
+ */
+void AddBgJob(pid_t pid)
+{
+  bgjobL* new_bgjob = malloc(sizeof(bgjobL));
+  new_bgjob->pid = pid;
+  new_bgjob->next = NULL;
+  if (bgjobs == NULL)
+  {
+    // first bg job
+    bgjobs = new_bgjob;
+  }
+  else
+  {
+    // add to end of list
+    bgjobL* i;
+    while(i->next != NULL)
+    {
+      i = i->next;
+    }  
+    i->next = new_bgjob;
+  }
+}
+
+/*
+ * RmBgJob
+ *
+ * arguments pid_t pid: pid of process that has completed
+ * 
+ * returns: none
+ * 
+ * This function removes a pid from the bg job list
+ *
+ */
+void RmBgJob(pid_t pid)
+{
+  // TODO
+}
+

@@ -243,6 +243,7 @@ commandT* getCommand(char* cmdLine)
   if ((cmd->argc > 0) && strcmp(cmd->argv[cmd->argc - 1], "&") == 0)
   {
     free(cmd->argv[cmd->argc - 1]);
+    cmd->argv[cmd->argc - 1] = 0;
     (cmd->argc)--;
     cmd->bg = 1;
   }
@@ -274,10 +275,13 @@ void freeCommand(commandT* cmd)
   }
 
   cmd->name = 0;
-  for (i = 0; cmd->argv[i] != 0; i++)
+  for (i = 0; i < cmd->argc; i++)
     {
-      free(cmd->argv[i]);
-      cmd->argv[i] = 0;
+      if(cmd->argv[i] != NULL)
+      {
+	free(cmd->argv[i]);
+	cmd->argv[i] = 0;
+      }
     }
   free(cmd);
 } /* freeCommand */
