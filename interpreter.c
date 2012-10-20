@@ -240,7 +240,7 @@ commandT* getCommand(char* cmdLine)
   cmd->name = cmd->argv[0];
 
   // determine whether it is a background job or not
-  if (strcmp(cmd->argv[cmd->argc - 1], "&") == 0)
+  if ((cmd->argc > 0) && strcmp(cmd->argv[cmd->argc - 1], "&") == 0)
   {
     free(cmd->argv[cmd->argc - 1]);
     (cmd->argc)--;
