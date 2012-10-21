@@ -279,8 +279,8 @@ void freeCommand(commandT* cmd)
     {
       if(cmd->argv[i] != NULL)
       {
-	free(cmd->argv[i]);
-	cmd->argv[i] = 0;
+      	free(cmd->argv[i]);
+      	cmd->argv[i] = 0;
       }
     }
   free(cmd);
