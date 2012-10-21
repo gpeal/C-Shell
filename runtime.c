@@ -83,7 +83,7 @@ static void RunExternalCmd(commandT*, bool);
 /* resolves the path and checks for exutable flag */
 static void ResolveExternalCmd(commandT* cmd);
 /* forks and runs a external program */
-static void Exec(commandT*, bool);
+static void Exec(commandT*, bool, bool);
 /* runs a builtin command */
 static void RunBuiltInCmd(commandT*);
 /* checks whether a command is a builtin command */
@@ -142,96 +142,45 @@ void RunCmdFork(commandT* cmd, bool fork)
   }
   else
   {
-    if (cmd->bg)
+    for(i = 0; cmd->argv[i] != 0; i++)
     {
-      RunCmdBg(cmd);
-      return;
-    }
-    else 
-    {
-      for(i = 0; cmd->argv[i] != 0; i++)
+      if (strcmp(cmd->argv[i], "|") == 0)
       {
-        if (strcmp(cmd->argv[i], "|") == 0)
-        {
-          //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
-          cmd2 = malloc(sizeof(commandT));
-          cmd2->argc = cmd->argc - i;
-          *cmd2->argv = cmd->argv[i + 1];
-          //terminate cmd argv prior to the pipe
-          cmd->argc = i;
-          free(cmd->argv[i]);
-          cmd->argv[i] = 0;
-          RunCmdPipe(cmd, cmd2);
-          return;
-        }
-        else if(strcmp(cmd->argv[i], ">") == 0)
-        {
-          cmd->argc = i;
-          free(cmd->argv[i]);
-          cmd->argv[i] = 0;
-          RunCmdRedirOut(cmd, cmd->argv[i + 1]);
-          //free the file name because freeCmd won't do it anymore
-          free(cmd->argv[i + 1]);
-          return;
-        }
-        else if(strcmp(cmd->argv[i], "<") == 0)
-        {
-          cmd->argc = i;
-          free(cmd->argv[i]);
-          cmd->argv[i] = 0;
-          RunCmdRedirIn(cmd, cmd->argv[i + 1]);
-          //free the file name because freeCmd won't do it anymore
-          free(cmd->argv[i + 1]);
-          return;
-        }
+        //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
+        cmd2 = malloc(sizeof(commandT));
+        cmd2->argc = cmd->argc - i;
+        *cmd2->argv = cmd->argv[i + 1];
+        //terminate cmd argv prior to the pipe
+        cmd->argc = i;
+        free(cmd->argv[i]);
+        cmd->argv[i] = 0;
+        RunCmdPipe(cmd, cmd2);
+        return;
+      }
+      else if(strcmp(cmd->argv[i], ">") == 0)
+      {
+        cmd->argc = i;
+        free(cmd->argv[i]);
+        cmd->argv[i] = 0;
+        RunCmdRedirOut(cmd, cmd->argv[i + 1]);
+        //free the file name because freeCmd won't do it anymore
+        free(cmd->argv[i + 1]);
+        return;
+      }
+      else if(strcmp(cmd->argv[i], "<") == 0)
+      {
+        cmd->argc = i;
+        free(cmd->argv[i]);
+        cmd->argv[i] = 0;
+        RunCmdRedirIn(cmd, cmd->argv[i + 1]);
+        //free the file name because freeCmd won't do it anymore
+        free(cmd->argv[i + 1]);
+        return;
       }
     }
     RunExternalCmd(cmd, fork);
   }
 } /* RunCmdFork */
-
-
-/*
- * RunCmdBg
- *
- * arguments:
- *   commandT *cmd: the command to be run
- *
- * returns: none
- *
- * Runs a command in the background.
- */
-void RunCmdBg(commandT* cmd)
-{
-  pid_t child;
-  int status = -1;
-
-  if ((child = fork()) == 0)
-  {
-    // child TODO: refactor this as it duplicates code in Exec
-    // set the group id to the pid so it can be killed properly
-    if(setpgid(0,0) != 0)
-      PrintPError("Error setting child gid\n");
-    
-    // if the command could not be resolved, argc is set to 0
-    if(cmd->argc > 0)
-      status = execv(cmd->name, cmd->argv);
-    else if (cmd->argc == 0)
-      printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
-    exit(status);
-  }
-  else if (child > 0)
-  {
-    // parent
-    AddBgJob(child);
-    printf("Bg job: %x\n", child);
-  }
-  else 
-  {
-    // error
-    PrintPError("Fork Failed\n");
-  }
-} /* RunCmdBg */
 
 
 /*
@@ -297,7 +246,7 @@ void RunCmdRedirIn(commandT* cmd, char* file)
 static void RunExternalCmd(commandT* cmd, bool fork)
 {
   ResolveExternalCmd(cmd);
-  Exec(cmd, fork);
+  Exec(cmd, fork, cmd->bg);
 }  /* RunExternalCmd */
 
 
@@ -376,12 +325,13 @@ static void ResolveExternalCmd(commandT* cmd)
  * arguments:
  *   commandT *cmd: the command to be run
  *   bool forceFork: whether to fork
+ *   bool bg: whether or not the command should be run in the background
  *
  * returns: none
  *
  * Executes a command.
  */
-static void Exec(commandT* cmd, bool forceFork)
+static void Exec(commandT* cmd, bool forceFork, bool bg)
 {
   pid_t child;
   int status = -1;
@@ -389,33 +339,43 @@ static void Exec(commandT* cmd, bool forceFork)
 
   if (forceFork)
   {
-      child = fork();
-      if (child >= 0) // fork succeeded
+    if ((child = fork()) > 0) // parent process
+    {
+      if (bg)
       {
-        if (child > 0) // parent process
+        AddBgJob(child);
+        printf("Bg job: %x\n", child);
+      }
+      else
+      {
+        fgJobPid = child;
+        do
         {
-          fgJobPid = child;
-          do
-          {
-            pid = waitpid(child, &status, 0);
-          } while (pid > 0);
-          status = WEXITSTATUS(status);
-        }
-        else // child process
-        {
-          // set the group id to the pid so it can be killed properly
-          if (setpgid(0, 0) != 0)
-            PrintPError("Error setting child gid\n");
-          // if the command could not be resolved, argc is set to 0
-          if(cmd->argc > 0)
-            status = execv(cmd->name, cmd->argv);
-          else if (cmd->argc == 0)
-            printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
-          exit(status);
-        }
+          pid = waitpid(child, &status, 0);
+        } while (pid > 0);
+        status = WEXITSTATUS(status);
+      }
+    }
+    else if (child == 0) // child process
+    {
+      // set the group id to the pid so it can be killed properly
+      if (setpgid(0, 0) != 0)
+        PrintPError("Error setting child gid\n");
+      // if the command could not be resolved, argc is set to 0
+      if(cmd->argc > 0)
+      {
+        status = execv(cmd->name, cmd->argv);
+      }
+      else if (cmd->argc == 0)
+      {
+        printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd->name);
+      }
+      exit(status);
     }
     else
+    {
       PrintPError("Fork Failed\n");
+    }
   }
   else // no fork
   {
@@ -621,4 +581,3 @@ void RmBgJob(pid_t pid)
 {
   // TODO
 }
-

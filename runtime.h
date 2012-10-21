@@ -91,15 +91,6 @@ VAREXTERN(bool forceExit, FALSE);
 EXTERN void RunCmd(commandT*);
 
 /***********************************************************************
- *  Title: Runs a command in background
- * ---------------------------------------------------------------------
- *    Purpose: Runs a command in background.
- *    Input: a command structure
- *    Output: void
- ***********************************************************************/
-EXTERN void RunCmdBg(commandT*);
-
-/***********************************************************************
  *  Title: Runs two command with a pipe
  * ---------------------------------------------------------------------
  *    Purpose: Runs two command connected with a pipe.
