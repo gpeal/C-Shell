@@ -54,6 +54,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
+ #include <errno.h>
 
 /************Private include**********************************************/
 #include "runtime.h"
@@ -163,20 +164,16 @@
         cmd->argc = i;
         free(cmd->argv[i]);
         cmd->argv[i] = 0;
-        RunCmdRedirOut(cmd, cmd->argv[i + 1]);
-        //free the file name because freeCmd won't do it anymore
-        free(cmd->argv[i + 1]);
-        return;
+        cmd->ioRedirect = IO_REDIRECT_OUT;
+        cmd->ioRedirectPath = cmd->argv[i + 1];
       }
       else if(strcmp(cmd->argv[i], "<") == 0)
       {
         cmd->argc = i;
         free(cmd->argv[i]);
         cmd->argv[i] = 0;
-        RunCmdRedirIn(cmd, cmd->argv[i + 1]);
-        //free the file name because freeCmd won't do it anymore
-        free(cmd->argv[i + 1]);
-        return;
+        cmd->ioRedirect = IO_REDIRECT_IN;
+        cmd->ioRedirectPath = cmd->argv[i + 1];
       }
     }
     RunExternalCmd(cmd, fork);
@@ -282,38 +279,6 @@
 
 
 /*
- * RunCmdRedirOut
- *
- * arguments:
- *   commandT *cmd: the command to be run
- *   char *file: the file to be used for standard output
- *
- * returns: none
- *
- * Runs a command, redirecting standard output to a file.
- */
- void RunCmdRedirOut(commandT* cmd, char* file)
- {
-} /* RunCmdRedirOut */
-
-
-/*
- * RunCmdRedirIn
- *
- * arguments:
- *   commandT *cmd: the command to be run
- *   char *file: the file to be used for standard input
- *
- * returns: none
- *
- * Runs a command, redirecting a file to standard input.
- */
- void RunCmdRedirIn(commandT* cmd, char* file)
- {
-}  /* RunCmdRedirIn */
-
-
-/*
  * RunExternalCmd
  *
  * arguments:
@@ -391,7 +356,7 @@
     // append ./ at the beginning
     strcpy(tmp, cmd->name);
     free(cmd->name);
-    cmd->name = malloc((strlen(tmp) + 2) * sizeof(char));
+    cmd->name = malloc((strlen(tmp) + 3) * sizeof(char));
     sprintf(cmd->name, "./%s", tmp);
   }
   // command could not be found. Set argc to 0 as a red flag for later
@@ -417,6 +382,7 @@
   pid_t child;
   int status = -1;
   int pid = 0;
+  int ioRedirectFile = -1;
 
   if (forceFork)
   {
@@ -445,7 +411,24 @@
       // if the command could not be resolved, argc is set to 0
       if(cmd->argc > 0)
       {
+        // set up io redirection if neccesary
+        if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
+        {
+          ioRedirectFile = open(cmd->ioRedirectPath,
+              ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
+          if (ioRedirectFile == -1)
+          {
+            printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
+            fflush(stdout);
+            exit(errno);
+          }
+          // this works because of the careful choice of the ioRedirect defines
+          dup2(ioRedirectFile, cmd->ioRedirect);
+        }
+
         status = execv(cmd->name, cmd->argv);
+        if (ioRedirectFile != -1)
+          close(ioRedirectFile);
       }
       else if (cmd->argc == 0)
       {
@@ -481,6 +464,8 @@
  {
   if (strchr(cmd, '='))
     return TRUE;
+  else if (!strcmp(cmd, "echo"))
+    return TRUE;
   else if (!strcmp(cmd, "cd"))
     return TRUE;
   else if (!strcmp(cmd, "exit"))
@@ -506,22 +491,22 @@
   char *tmp;
   if (strchr(cmd->name, '='))
     setEnvVar(cmd);
-  // else if (!strcmp(cmd->argv[0], "echo"))
-  // {
-  //   if (cmd->argc > 1)
-  //   {
-  //     if (cmd->argv[1][0] == '$')
-  //     {
-  //       tmp = getenv(cmd->argv[1] + sizeof(char));
-  //       if (tmp)
-  //         printf("%s\n", tmp);
-  //       else
-  //         printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
-  //     }
-  //     else
-  //       printf("%s\n", cmd->argv[1]);
-  //   }
-  // }
+  else if (!strcmp(cmd->argv[0], "echo"))
+  {
+    if (cmd->argc > 1)
+    {
+      if (cmd->argv[1][0] == '$')
+      {
+        tmp = getenv(cmd->argv[1] + sizeof(char));
+        if (tmp)
+          printf("%s\n", tmp);
+        else
+          printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
+      }
+      else
+        printf("%s\n", cmd->argv[1]);
+    }
+  }
   else if (!strcmp(cmd->argv[0], "cd"))
   {
     if (cmd->argc > 1)

@@ -56,11 +56,17 @@
 #define VAREXTERN(x, y) extern x;
 #endif
 
+#define IO_REDIRECT_NONE -1
+#define IO_REDIRECT_IN   STDIN_FILENO
+#define IO_REDIRECT_OUT  STDOUT_FILENO
+
 typedef struct command_t
 {
   char* name;
   int argc;
   int bg;
+  int ioRedirect;
+  char* ioRedirectPath;
   char* argv[];
 } commandT;
 
@@ -98,24 +104,6 @@ EXTERN void RunCmd(commandT*);
  *    Output: void
  ***********************************************************************/
 EXTERN void RunCmdPipe(commandT*, commandT*);
-
-/***********************************************************************
- *  Title: Runs two command with output redirection
- * ---------------------------------------------------------------------
- *    Purpose: Runs a command and redirects the output to a file.
- *    Input: a command structure structure and a file name
- *    Output: void
- ***********************************************************************/
-EXTERN void RunCmdRedirOut(commandT*, char*);
-
-/***********************************************************************
- *  Title: Runs two command with input redirection
- * ---------------------------------------------------------------------
- *    Purpose: Runs a command and redirects the input to a file.
- *    Input: a command structure structure and a file name
- *    Output: void
- ***********************************************************************/
-EXTERN void RunCmdRedirIn(commandT*, char*);
 
 /***********************************************************************
  *  Title: Stop the foreground process
