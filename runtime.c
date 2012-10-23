@@ -333,7 +333,8 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
         // set up io redirection if neccesary
         if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
         {
-          ioRedirectFile = open(cmd->ioRedirectPath, O_WRONLY | O_CREAT, 0644);
+          ioRedirectFile = open(cmd->ioRedirectPath,
+              ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
           if (ioRedirectFile == -1)
           {
             printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
