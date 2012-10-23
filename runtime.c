@@ -96,7 +96,11 @@ static void setEnvVar(commandT* cmd);
 /* adds a pid to the bg job list  */
 static void AddBgJob(pid_t pid);
 /* removes a pid from the bg job list */
-static void RmBgJob(pid_t pid);
+void RmBgJobPid(pid_t pid);
+/* prints a job when it's status changes */
+static void printJob(bgjobL*,int jobNum);
+/* frees a bgjobl struct  */
+static void freeBgJob(bgjobL* job);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -443,7 +447,7 @@ static void RunBuiltInCmd(commandT* cmd)
   }
   else if (!strcmp(cmd->argv[0], "jobs"))
   {
-    int i = 0;
+    int i = 1;
     bgjobL* job_i = bgjobs;
 
     while(job_i != NULL)
@@ -541,7 +545,7 @@ void AddBgJob(pid_t pid)
   else
   {
     // add to end of list
-    bgjobL* i;
+    bgjobL* i = bgjobs;
     while(i->next != NULL)
     {
       i = i->next;
@@ -551,16 +555,61 @@ void AddBgJob(pid_t pid)
 }
 
 /*
- * RmBgJob
+ * RmBgJobPid
  *
  * arguments pid_t pid: pid of process that has completed
  * 
  * returns: none
  * 
- * This function removes a pid from the bg job list
+ * This function removes a bg job from the bg job list by pid
  *
  */
-void RmBgJob(pid_t pid)
+void RmBgJobPid(pid_t pid)
 {
-  // TODO
+  bgjobL* i = bgjobs;
+  int jobNum = 1; // change this later to be in the job struct
+  if (i != NULL) {
+    if (i->pid == pid)
+    {
+      // it's the first element of the list
+      bgjobs = i->next;
+      printJob(i, jobNum);
+      freeBgJob(i);
+      return;
+    }
+    jobNum++;
+    // find the element of the list before the one we want to remove
+    while(i->next != NULL)
+    {
+      if (i->next->pid == pid)
+      {
+        // remove the job from the list and free the memory
+        bgjobL* toFree = i->next;
+        i->next = i->next->next;
+        printJob(toFree, jobNum);
+        freeBgJob(toFree);
+        return;
+      }
+      jobNum++;
+    }
+  }
+  fprintf(stderr, "job not found");
+}
+
+/*
+ * printJob
+ */
+static void printJob(bgjobL* bgjob, int jobNum)
+{
+  printf("[%x]  Done\tPid=%d\n", jobNum, bgjob->pid);
+}
+
+/*
+ * freeBgJob
+ *
+ * frees the job struct
+ */
+static void freeBgJob(bgjobL* job)
+{
+  free(job);
 }

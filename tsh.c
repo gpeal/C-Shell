@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <pwd.h>
 
 /************Private include**********************************************/
@@ -38,8 +39,10 @@
  extern bgjobL *bgjobs;
  
 /************Function Prototypes******************************************/
-/* handles SIGINT and SIGSTOP signals */
+/* handles SIGINT, SIGSTOP signals */
 static void sig(int);
+/* handles SIGCHLD signals */
+static void sigChldHandler(int signo);
 /* loads ~/.tshrc file */
 static void initTshRC();
 
@@ -70,6 +73,8 @@ int main(int argc, char *argv[])
     PrintPError("SIGINT");
   if (signal(SIGTSTP, sig) == SIG_ERR)
     PrintPError("SIGTSTP");
+  if (signal(SIGCHLD, sigChldHandler) == SIG_ERR)
+    PrintPError("SIGCHLD");
 
   initTshRC();
 
@@ -102,6 +107,7 @@ int main(int argc, char *argv[])
  *
  * This should handle signals sent to tsh.
  * for INT or TERM, it will kill all background jobs and the foreground job
+ * for CHLD it will reap all background jobs
  */
 static void sig(int signo)
 {
@@ -115,6 +121,40 @@ static void sig(int signo)
     StopFgProc();
   }
 } /* sig */
+
+/*
+ * sigChldHandler
+ *
+ * arguments:
+ *   int: signo: the signal received (should always be SIGCHLD)
+ *
+ * This handles SIGCHLD (when a child process dies) It waits for one
+ * child and removes that child from the bgjob list
+ *
+ */
+static void sigChldHandler(int signo)
+{
+  if (signo == SIGCHLD)
+  {
+    printf("Received SIGCHLD\n");
+    fflush(stdout);
+    pid_t child;
+    int stat;
+    child = waitpid(-1, &stat, WNOHANG);
+
+    if (child > 0)
+    {
+      // reap child
+      waitpid(child,&stat, 0);
+      // remove child from bgJobL
+      RmBgJobPid(child);
+    }
+  }
+  else
+  {
+    fprintf(stderr, "SIGCHLD handler called with non-SIGCHLD!\n");
+  }
+}
 
 /*
  * initTshRC
