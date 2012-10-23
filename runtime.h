@@ -97,7 +97,7 @@ EXTERN void RunCmd(commandT*);
  *    Input: two command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void RunCmdPipe(commandT*, commandT*);
+EXTERN void RunCmdPipe(commandTLinked* cmd);
 
 /***********************************************************************
  *  Title: Runs two command with output redirection
