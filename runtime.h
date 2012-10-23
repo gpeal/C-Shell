@@ -73,7 +73,7 @@ typedef struct command_t
 typedef struct command_t_linked
 {
   commandT *cmd;
-  commandT *next;
+  struct command_t_linked *next;
 } commandTLinked;
 
 typedef struct bgjob_l

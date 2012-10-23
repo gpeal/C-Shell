@@ -87,6 +87,9 @@
  static void Exec(commandT*, bool, bool);
 /* runs a builtin command */
  static void RunBuiltInCmd(commandT*);
+ /* turns a piped command into a reverse linked list of the individual commands */
+ static commandTLinked *parsePipedCmd(commandT*
+  );
 /* checks whether a command is a builtin command */
  static bool IsBuiltIn(char*);
 /* checks whether or not a file exists */
@@ -148,7 +151,8 @@
       if (strcmp(cmd->argv[i], "|") == 0)
       {
         //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
-        cmd2 = malloc(sizeof(commandT));
+        parsePipedCmd(cmd);
+        /*cmd2 = malloc(sizeof(commandT));
         cmd2->argc = cmd->argc - i;
         *cmd2->argv = cmd->argv[i + 1];
         cmd2->name = cmd2->argv[0];
@@ -156,7 +160,7 @@
         cmd->argc = i;
         free(cmd->argv[i]);
         cmd->argv[i] = 0;
-        RunCmdPipe(cmd, cmd2);
+        RunCmdPipe(cmd, cmd2);*/
         return;
       }
       else if(strcmp(cmd->argv[i], ">") == 0)
@@ -193,7 +197,7 @@
  * Runs two commands, redirecting standard output from the first to
  * standard input on the second.
  */
- void RunCmdPipe(commandT* cmd1, commandT* cmd2)
+/* void RunCmdPipe(commandT* cmd1, commandT* cmd2)
  {
   pid_t child;
   int status = -1;
@@ -228,12 +232,12 @@
     int fd[2];
     pipe(fd);
 
-    if ((pipes_child = fork()) > 0){
+    if ((pipes_child = fork()) > 0) {
       // the pipe parent
 
-       close(fd[1]);
-       dup2(fd[0], STDIN_FILENO);
-       close(fd[0]);
+      close(fd[1]);
+      dup2(fd[0], STDIN_FILENO);
+      close(fd[0]);
       fprintf (stdout,"waiting %s in pipe parent\n", cmd2->argv[0]);
 
        do
@@ -275,7 +279,83 @@
       exit(pipe_status);
     }
   }
-} /* RunCmdPipe */
+} *//* RunCmdPipe */
+
+
+/*
+ * parsePipedCmd
+ *
+ * arguments:
+ *   commandT *cmd: the command to be parsed
+ *
+ * returns *commandTLinked: a linked list *commandT representing each piped command in reverse order (right to left)
+ *
+ * Takes a commandT* that has multiple piped commands and structures them into an array of individual commands
+ * This also reverses the order of the commands for use by RunCmdFork
+ */
+static commandTLinked *parsePipedCmd(commandT* cmd)
+{
+  int i = 0;
+  int i2 = 0;
+  int argc = 0;
+  commandTLinked *pipedCmdHead;
+  commandTLinked *pipedCmdCurrent = NULL;
+  commandTLinked *pipedCmdTmp;
+
+  for (i = cmd->argc - 1; i >= 0; i--)
+  {
+    if (strcmp(cmd->argv[i], "|") != 0)
+    {
+      // increase the argc for the current command and continue to the next argv
+      argc++;
+      continue;
+    }
+    // argv[i] equals "|"
+    if (!pipedCmdCurrent)
+    {
+      pipedCmdHead = malloc(sizeof(commandTLinked) + sizeof(char*) * argc);
+      pipedCmdCurrent = pipedCmdHead;
+      pipedCmdCurrent->next = NULL;
+    }
+    else
+    {
+      pipedCmdCurrent->next = malloc(sizeof(commandT) + sizeof(char*) * argc);
+      pipedCmdCurrent = pipedCmdCurrent->next;
+    }
+    pipedCmdCurrent->cmd = malloc(sizeof(commandT *));
+    pipedCmdCurrent->cmd->argc = argc;
+    for (i2 = 0; i2 < argc; i2++)
+    {
+      pipedCmdCurrent->cmd->argv[i2] = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
+      strcpy(pipedCmdCurrent->cmd->argv[i2], cmd->argv[i + 1 + i2]);
+      free(cmd->argv[i + 1 + i2]);
+    }
+    free(cmd->argv[i]);
+    cmd->argv[i] = 0;
+    argc = 0;
+  }
+  // now add the first part of the cmd
+  pipedCmdCurrent->next = malloc(sizeof(commandTLinked *));
+  pipedCmdCurrent = pipedCmdCurrent->next;
+  pipedCmdCurrent->cmd = cmd;
+  pipedCmdCurrent->cmd->argc = argc;
+  pipedCmdCurrent->next = NULL;
+  pipedCmdCurrent = pipedCmdHead;
+  pipedCmdHead = pipedCmdCurrent;
+
+  while (pipedCmdCurrent != NULL)
+  {
+    printf("%i: ", pipedCmdCurrent->cmd->argc);
+    for (i = 0; i < pipedCmdCurrent->cmd->argc; i++)
+    {
+      printf("%s ", pipedCmdCurrent->cmd->argv[i]);
+    }
+    printf("\n");
+    pipedCmdCurrent = pipedCmdCurrent->next;
+  }
+
+  return pipedCmdHead;
+}
 
 
 /*
