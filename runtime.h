@@ -70,6 +70,12 @@ typedef struct command_t
   char* argv[];
 } commandT;
 
+typedef struct command_t_linked
+{
+  commandT *cmd;
+  commandT *next;
+} commandTLinked;
+
 typedef struct bgjob_l
 {
   pid_t pid;
