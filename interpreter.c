@@ -122,6 +122,8 @@ commandT* getCommand(char* cmdLine)
   cmd->argv[0] = 0;
   cmd->name = 0;
   cmd->argc = 0;
+  cmd->ioRedirect = IO_REDIRECT_NONE;
+  cmd->ioRedirectPath = NULL;
 
   int i, inArg = 0;
   char quote = 0;
@@ -272,6 +274,11 @@ void freeCommand(commandT* cmd)
   if (cmd->name != cmd->argv[0])
   {
       free(cmd->name);
+  }
+
+  if (cmd->ioRedirectPath != NULL)
+  {
+    free(cmd->ioRedirectPath);
   }
 
   cmd->name = 0;

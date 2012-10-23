@@ -54,6 +54,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
+ #include <errno.h>
 
 /************Private include**********************************************/
 #include "runtime.h"
@@ -162,20 +163,16 @@ void RunCmdFork(commandT* cmd, bool fork)
         cmd->argc = i;
         free(cmd->argv[i]);
         cmd->argv[i] = 0;
-        RunCmdRedirOut(cmd, cmd->argv[i + 1]);
-        //free the file name because freeCmd won't do it anymore
-        free(cmd->argv[i + 1]);
-        return;
+        cmd->ioRedirect = IO_REDIRECT_OUT;
+        cmd->ioRedirectPath = cmd->argv[i + 1];
       }
       else if(strcmp(cmd->argv[i], "<") == 0)
       {
         cmd->argc = i;
         free(cmd->argv[i]);
         cmd->argv[i] = 0;
-        RunCmdRedirIn(cmd, cmd->argv[i + 1]);
-        //free the file name because freeCmd won't do it anymore
-        free(cmd->argv[i + 1]);
-        return;
+        cmd->ioRedirect = IO_REDIRECT_IN;
+        cmd->ioRedirectPath = cmd->argv[i + 1];
       }
     }
     RunExternalCmd(cmd, fork);
@@ -198,38 +195,6 @@ void RunCmdFork(commandT* cmd, bool fork)
 void RunCmdPipe(commandT* cmd1, commandT* cmd2)
 {
 } /* RunCmdPipe */
-
-
-/*
- * RunCmdRedirOut
- *
- * arguments:
- *   commandT *cmd: the command to be run
- *   char *file: the file to be used for standard output
- *
- * returns: none
- *
- * Runs a command, redirecting standard output to a file.
- */
-void RunCmdRedirOut(commandT* cmd, char* file)
-{
-} /* RunCmdRedirOut */
-
-
-/*
- * RunCmdRedirIn
- *
- * arguments:
- *   commandT *cmd: the command to be run
- *   char *file: the file to be used for standard input
- *
- * returns: none
- *
- * Runs a command, redirecting a file to standard input.
- */
-void RunCmdRedirIn(commandT* cmd, char* file)
-{
-}  /* RunCmdRedirIn */
 
 
 /*
@@ -336,6 +301,7 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
   pid_t child;
   int status = -1;
   int pid = 0;
+  int ioRedirectFile = -1;
 
   if (forceFork)
   {
@@ -364,7 +330,23 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
       // if the command could not be resolved, argc is set to 0
       if(cmd->argc > 0)
       {
+        // set up io redirection if neccesary
+        if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
+        {
+          ioRedirectFile = open(cmd->ioRedirectPath, O_WRONLY | O_CREAT, 0644);
+          if (ioRedirectFile == -1)
+          {
+            printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
+            fflush(stdout);
+            exit(errno);
+          }
+          // this works because of the careful choice of the ioRedirect defines
+          dup2(ioRedirectFile, cmd->ioRedirect);
+        }
+
         status = execv(cmd->name, cmd->argv);
+        if (ioRedirectFile != -1)
+          close(ioRedirectFile);
       }
       else if (cmd->argc == 0)
       {
