@@ -275,7 +275,7 @@ static void ResolveExternalCmd(commandT* cmd)
     // append ./ at the beginning
     strcpy(tmp, cmd->name);
     free(cmd->name);
-    cmd->name = malloc((strlen(tmp) + 2) * sizeof(char));
+    cmd->name = malloc((strlen(tmp) + 3) * sizeof(char));
     sprintf(cmd->name, "./%s", tmp);
   }
   // command could not be found. Set argc to 0 as a red flag for later
