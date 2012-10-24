@@ -309,18 +309,27 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
   int status = -1;
   int pid = 0;
   int ioRedirectFile = -1;
+  sigset_t signals;
+
+  sigemptyset(&signals);
+  sigaddset(&signals, SIGCHLD);
 
   if (forceFork)
   {
+    // block sigchld to avoid race condition between adding and
+    // removing jobs from the bg job list
+    sigprocmask(SIG_BLOCK, &signals, NULL);
     if ((child = fork()) > 0) // parent process
     {
       if (bg)
       {
         AddBgJob(child);
+        sigprocmask(SIG_UNBLOCK, &signals, NULL);
         printf("Bg job: %x\n", child);
       }
       else
       {
+        sigprocmask(SIG_UNBLOCK, &signals, NULL);
         fgJobPid = child;
         do
         {
@@ -331,6 +340,8 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
     }
     else if (child == 0) // child process
     {
+      // unblock sigchld
+      sigprocmask(SIG_UNBLOCK, &signals, NULL);
       // set the group id to the pid so it can be killed properly
       if (setpgid(0, 0) != 0)
         PrintPError("Error setting child gid\n");
