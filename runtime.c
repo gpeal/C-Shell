@@ -204,7 +204,7 @@
   child = fork();
 
    if(child >= 0) // fork was successful
-    {
+   {
         if(child == 0) // child process
         {
           RunCmdPipeRecurse(cmd);
@@ -221,7 +221,7 @@
       }
     else // fork failed
     {
-        perror("Fork failed!\n");
+      perror("Fork failed!\n");
     }
 
  } /* RunCmdPipe */
@@ -229,13 +229,15 @@
   *
   *
   */
- void RunCmdPipeRecurse(commandTLinked* cmd){
-  if(cmd->next != NULL){
-    pid_t grandchild;
-    int grandchild_status = -1;
-    grandchild = fork();
+  void RunCmdPipeRecurse(commandTLinked* cmd){
     int fd[2];
     pipe(fd);
+    int grandchild_status = -1;
+    if(cmd->next != NULL){
+      pid_t grandchild;
+
+      grandchild = fork();
+
     if(grandchild == 0) // grandchild process
     {
      close(fd[0]); //close read from pipe
@@ -243,13 +245,13 @@
      close(fd[1]);
      RunCmdPipeRecurse(cmd->next);
      ResolveExternalCmd(cmd->cmd);
-     status = execv(cmd->name, cmd->cmd->argv);
+     grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
 
-     if(status == -1){
+     if(grandchild_status == -1){
       perror("Execv Fail");
-     }
-     exit(1);
     }
+    exit(1);
+  }
     else //child process
     {
       close(fd[1]); //close write to pipe
@@ -257,26 +259,27 @@
       close(fd[0]);
 
       grandchild_status = waitpid(grandchild, &grandchild_status, 0);
-      if(status == -1){
+      if(grandchild_status == -1){
         perror("Wait Fail");
       }
       grandchild_status = WEXITSTATUS(grandchild_status);
       exit(grandchild_status);
     }
-  } else{
+  }
+  else{
       close(fd[0]); //close read from pipe
       dup2(fd[1], STDOUT_FILENO); // Replace stdout with the write end of the pipe
       close(fd[1]);
 
       ResolveExternalCmd(cmd->cmd);
 
-      status = execv(cmd->name, cmd->cmd->argv);
-      if(status == -1){
-          perror("Execv Fail");
+      grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
+      if(grandchild_status == -1){
+        perror("Execv Fail");
       }
     }
   }
-} /* RunCmdPipe */
+ /* RunCmdPipe */
 
 
 /*
@@ -290,8 +293,8 @@
  * Takes a commandT* that has multiple piped commands and structures them into an array of individual commands
  * This also reverses the order of the commands for use by RunCmdFork
  */
-static commandTLinked *parsePipedCmd(commandT* cmd)
-{
+ static commandTLinked *parsePipedCmd(commandT* cmd)
+ {
   int i = 0;
   int i2 = 0;
   int argc = 0;
@@ -492,7 +495,7 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
         if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
         {
           ioRedirectFile = open(cmd->ioRedirectPath,
-              ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
+            ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
           if (ioRedirectFile == -1)
           {
             printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
