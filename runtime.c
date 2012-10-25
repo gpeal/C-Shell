@@ -241,30 +241,34 @@
     if(grandchild == 0) // grandchild process
     {
 
-      if(passed_fd == NULL){
-        //right  most command
-        fprintf (stderr, "cmd= null: Read: %i Write: %i\n", fd[0], fd[1]);
-        dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
-      }
-      else if (cmd->next == NULL) {
-        //left most command
-        fprintf (stderr, "pass null: Read: %i Write: %i\n", passed_fd[1], passed_fd[0]);
-        dup2(passed_fd[1], STDOUT_FILENO);
-      }
-      else {
-        fprintf (stderr, "else : Read: %i Write: %i\n", fd[0], fd[1]);
-        dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
-
-        dup2(passed_fd[1], STDOUT_FILENO);
-      }
-      if(cmd->next != NULL){
-        fprintf (stderr, "executing before recurse: %s\n", cmd->next->cmd->name);
+      // if(passed_fd == NULL){
+      //   //right  most command
+      //   fprintf(stderr, "cmd= null: Read: %i Write: %i\n", fd[0], fd[1]);
+      //   dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
+      // }
+      // else if(cmd->next == NULL)
+      // {
+      //   //left most command
+      //   fprintf(stderr, "pass null: Read: %i Write: %i\n", passed_fd[1], passed_fd[0]);
+      //   dup2(passed_fd[1], STDOUT_FILENO);
+      // }
+      // else
+      // {
+      //   fprintf (stderr, "else : Read: %i Write: %i\n", fd[0], fd[1]);
+      //   dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
+      //   dup2(passed_fd[1], STDOUT_FILENO);
+      // }
+      fprintf (stderr, "current command: %s\n", cmd->cmd->name);
+      if(cmd->next != NULL)
+      {
+        fprintf(stderr, "executing before recurse: %s\n", cmd->next->cmd->name);
         RunCmdPipeRecurse(cmd->next, fd);
       }
-      fprintf (stderr, "executing after recurse: %s\n", cmd->cmd->name);
+      fprintf(stderr, "executing after recurse: %s\n", cmd->cmd->name);
       grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
 
-      if(grandchild_status == -1){
+      if(grandchild_status == -1)
+      {
         perror("Execv Fail");
       }
       exit(1);
@@ -272,11 +276,13 @@
     else if (grandchild > 0)//child process
     {
       grandchild_status = waitpid(grandchild, &grandchild_status, 0);
-      if(grandchild_status == -1){
+      if(grandchild_status == -1)
+      {
         perror("Wait Fail");
       }
       grandchild_status = WEXITSTATUS(grandchild_status);
-      if (cmd->next == NULL) {
+      if (cmd->next == NULL)
+      {
         exit(grandchild_status);
       }
     }
