@@ -137,33 +137,34 @@
  void RunCmdFork(commandT* cmd, bool fork)
  {
   int i;
-  commandT *cmd2;
+  bool pipe = FALSE;
+  char *quotPtr;
+  for(i = 0; cmd->argv[i] != 0; i++)
+  {
+    quotPtr = strrchr(cmd->argv[i], '|');
+    if(quotPtr != NULL){
+      pipe = TRUE;
+    }
+  }
   if (cmd->argc <= 0)
     return;
   if (IsBuiltIn(cmd->argv[0]))
   {
     RunBuiltInCmd(cmd);
   }
+  else if (pipe)
+  {
+    //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
+    commandTLinked *cmdt = parsePipedCmd(cmd);
+    RunCmdPipe(cmdt);
+    return;
+  }
   else
   {
     for(i = 0; cmd->argv[i] != 0; i++)
     {
-      if (strcmp(cmd->argv[i], "|") == 0)
-      {
-        //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
-        parsePipedCmd(cmd);
-        /*cmd2 = malloc(sizeof(commandT));
-        cmd2->argc = cmd->argc - i;
-        *cmd2->argv = cmd->argv[i + 1];
-        cmd2->name = cmd2->argv[0];
-        //terminate cmd argv prior to the pipe
-        cmd->argc = i;
-        free(cmd->argv[i]);
-        cmd->argv[i] = 0;
-        RunCmdPipe(cmd, cmd2);*/
-        return;
-      }
-      else if(strcmp(cmd->argv[i], ">") == 0)
+
+      if(strcmp(cmd->argv[i], ">") == 0)
       {
         cmd->argc = i;
         free(cmd->argv[i]);
@@ -207,7 +208,8 @@
    {
         if(child == 0) // child process
         {
-          RunCmdPipeRecurse(cmd);
+          printf("%s\n", "Running first recurse");
+          RunCmdPipeRecurse(cmd, NULL);
           exit(1);
         } else //Parent process
         {
@@ -216,7 +218,6 @@
             perror("Wait Fail");
           }
           status = WEXITSTATUS(status);
-          exit(status);
         }
       }
     else // fork failed
@@ -229,54 +230,63 @@
   *
   *
   */
-  void RunCmdPipeRecurse(commandTLinked* cmd){
+  void RunCmdPipeRecurse(commandTLinked* cmd, int passed_fd[]){
     int fd[2];
     pipe(fd);
     int grandchild_status = -1;
-    if(cmd->next != NULL){
-      pid_t grandchild;
+    pid_t grandchild;
+    fprintf (stderr, "%s", "forking grandchild\n");
 
-      grandchild = fork();
-
+    grandchild = fork();
     if(grandchild == 0) // grandchild process
     {
-     close(fd[0]); //close read from pipe
-     dup2(fd[1], STDOUT_FILENO); // Replace stdout with the write end of the pipe
-     close(fd[1]);
-     RunCmdPipeRecurse(cmd->next);
-     ResolveExternalCmd(cmd->cmd);
-     grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
 
-     if(grandchild_status == -1){
-      perror("Execv Fail");
+      if(passed_fd == NULL){
+        //right  most command
+        fprintf (stderr, "cmd= null: Read: %i Write: %i\n", fd[0], fd[1]);
+        // close(fd[1]); //close write to pipe
+        dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
+        // close(fd[0]);
+      }
+      else if (cmd->next == NULL) {
+        //left most command
+        fprintf (stderr, "pass null: Read: %i Write: %i\n", passed_fd[1], passed_fd[0]);
+        // close(passed_fd[0]);
+        dup2(passed_fd[1], STDOUT_FILENO);
+        // close(passed_fd[0]);
+      }
+      else {
+        fprintf (stderr, "else : Read: %i Write: %i\n", fd[0], fd[1]);
+        close(fd[1]); //close write to pipe
+        dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
+        close(fd[0]);
+
+        close(passed_fd[0]);
+        dup2(passed_fd[1], STDOUT_FILENO);
+        close(passed_fd[1]);
+      }
+      if(cmd->next != NULL){
+        fprintf (stderr, "executing before recurse: %s\n", cmd->next->cmd->name);
+        RunCmdPipeRecurse(cmd->next, fd);
+      }
+      fprintf (stderr, "executing after recurse: %s\n", cmd->cmd->name);
+      grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
+
+      if(grandchild_status == -1){
+        perror("Execv Fail");
+      }
+      exit(1);
     }
-    exit(1);
-  }
-    else //child process
+    else if (grandchild > 0)//child process
     {
-      close(fd[1]); //close write to pipe
-      dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
-      close(fd[0]);
-
       grandchild_status = waitpid(grandchild, &grandchild_status, 0);
       if(grandchild_status == -1){
         perror("Wait Fail");
       }
       grandchild_status = WEXITSTATUS(grandchild_status);
-      exit(grandchild_status);
     }
-  }
-  else{
-      close(fd[0]); //close read from pipe
-      dup2(fd[1], STDOUT_FILENO); // Replace stdout with the write end of the pipe
-      close(fd[1]);
-
-      ResolveExternalCmd(cmd->cmd);
-
-      grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
-      if(grandchild_status == -1){
-        perror("Execv Fail");
-      }
+    else{
+      perror("Fork Error");
     }
   }
  /* RunCmdPipe */
