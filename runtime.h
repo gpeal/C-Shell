@@ -76,6 +76,13 @@ typedef struct bgjob_l
   struct bgjob_l* next;
 } bgjobL;
 
+typedef struct alias
+{
+  char *from;
+  char *to;
+  struct alias *next;
+} Alias;
+
 /************Global Variables*********************************************/
 
 /***********************************************************************

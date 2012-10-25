@@ -76,6 +76,9 @@ bgjobL *bgjobs = NULL;
 
 int fgJobPid = 0;
 
+/* All aliased commands */
+Alias *aliases = NULL;
+
 /************Function Prototypes******************************************/
 /* run command */
 static void RunCmdFork(commandT*, bool);
@@ -101,6 +104,7 @@ void RmBgJobPid(pid_t pid);
 static void printJob(bgjobL*,int jobNum);
 /* frees a bgjobl struct  */
 static void freeBgJob(bgjobL* job);
+static void replaceWithAlias(char *str);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -141,6 +145,7 @@ void RunCmdFork(commandT* cmd, bool fork)
   commandT *cmd2;
   if (cmd->argc <= 0)
     return;
+  replaceWithAlias(cmd->argv[0]);
   if (IsBuiltIn(cmd->argv[0]))
   {
     RunBuiltInCmd(cmd);
@@ -395,6 +400,10 @@ static bool IsBuiltIn(char* cmd)
     return TRUE;
   else if (!strcmp(cmd, "jobs"))
     return TRUE;
+  else if (!strcmp(cmd, "alias"))
+    return TRUE;
+  else if (!strcmp(cmd, "unalias"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -412,6 +421,10 @@ static bool IsBuiltIn(char* cmd)
 static void RunBuiltInCmd(commandT* cmd)
 {
   char *tmp;
+  char *from;
+  char *to;
+  Alias *alias;
+  Alias *aliastmp;
   if (strchr(cmd->name, '='))
     setEnvVar(cmd);
   else if (!strcmp(cmd->argv[0], "echo"))
@@ -457,7 +470,84 @@ static void RunBuiltInCmd(commandT* cmd)
 	i++;
       }
   }
+  else if (!strcmp(cmd->argv[0], "alias"))
+  {
+    if (cmd->argc == 1)
+    {
+      alias = aliases;
+      while(alias)
+      {
+        printf("%s=%s\n", alias->from, alias->to);
+        alias = alias->next;
+      }
+      return;
+    }
+    tmp = cmd->argv[1];
+    while (*tmp != '=' && *tmp != '\0')
+      tmp++;
+    // Normally you would multiply by sizeof(char) bit in the pointer arithmetic, you also divide by it so they
+    // actually cancel (cool!)
+    from = malloc(tmp - cmd->argv[1] + sizeof(char));
+    strncpy(from, cmd->argv[1], (tmp - cmd->argv[1]) / sizeof(char));
+    tmp++;
+    if (*tmp == '\'')
+      tmp++;
+    // malloc the size of the command minus the length of the start to the beginning of the to command
+    to = malloc(strlen(cmd->argv[1]) - (tmp - cmd->argv[1]) + sizeof(char));
+    strncpy(to, tmp, (strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char));
+    from[(tmp - cmd->argv[1]) / sizeof(char) - 1] = '\0';
+    to[(strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char)] = '\0';
+    alias = malloc(sizeof(Alias *));
+    if (aliases == NULL)
+    {
+      aliases = alias;
+      alias->next = NULL;
+    }
+    else
+    {
+      alias->next = aliases;
+      aliases = alias;
+    }
+    alias->from = from;
+    alias->to = to;
+    printf("Aliasing %s to %s\n", from, to);
+
+  }
+  else if (!strcmp(cmd->argv[0], "unalias"))
+  {
+    alias = aliases;
+    if (alias == NULL || cmd->argc != 2)
+      return;
+    if (!strcmp(alias->from, cmd->argv[1]))
+      aliases = alias->next;
+    while(alias != NULL)
+    {
+      if (!strcmp(alias->next->from, cmd->argv[1]))
+      {
+        aliastmp = alias->next;
+        alias->next = alias->next->next;
+        free(aliastmp);
+      }
+      alias = alias->next;
+    }
+  }
 } /* RunBuiltInCmd */
+
+static void replaceWithAlias(char *str)
+{
+  Alias *alias = aliases;
+  while(alias != NULL)
+  {
+    if (!strcmp(str, alias->from))
+    {
+      printf("Replacing %s with %s\n", str, alias->to);
+      free(str);
+      str = malloc(sizeof(char) * strlen(alias->to) + 1);
+      strcpy(str, alias->to);
+    }
+    alias = alias->next;
+  }
+}
 
 static void setEnvVar(commandT* cmd) {
   char *str = malloc(64 * sizeof(char));
