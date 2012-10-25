@@ -80,6 +80,10 @@ void locateCommand(commandT *cmd, char *path);
 
 void parsePath(char **paths[], int *pathsc);
 
+commandT* copyCommand(commandT* cmd);
+
+/* External Declarations */
+extern char* fgJobCmd;
 /**************Implementation***********************************************/
 
 
@@ -97,7 +101,8 @@ void parsePath(char **paths[], int *pathsc);
 void Interpret(char* cmdLine)
 {
   commandT* cmd = getCommand(cmdLine);
-  RunCmd(cmd);
+
+  RunCmd(cmd, cmdLine);
 
   freeCommand(cmd);
 } /* Interpret */
@@ -296,7 +301,7 @@ void freeCommand(commandT* cmd)
 {
   int i;
 
-  if (cmd->name != cmd->argv[0])
+  if (cmd->name != cmd->argv[0] && cmd->name != NULL)
   {
       free(cmd->name);
   }
@@ -317,3 +322,27 @@ void freeCommand(commandT* cmd)
     }
   free(cmd);
 } /* freeCommand */
+
+char* copyString(char* str)
+{
+  if(str == NULL)
+    return NULL;
+  return strndup(str, strlen(str));
+}
+
+/* Provides a newly allocated copy of the cmd struct  */
+commandT *copyCommand(commandT* cmd)
+{
+  int i;
+  commandT* cmd_copy = malloc(sizeof(commandT) + sizeof(char*) * MAXARGS);
+  cmd_copy->name = copyString(cmd->name);
+  cmd_copy->argc = cmd->argc;
+  cmd_copy->bg = cmd->bg;
+  cmd_copy->ioRedirect = cmd->ioRedirect;
+  cmd_copy->ioRedirectPath = copyString(cmd->ioRedirectPath);
+  for(i=0; i < cmd->argc; i++)
+  {
+    cmd_copy->argv[i] = copyString(cmd->argv[i]);
+  }
+  return cmd_copy;
+}

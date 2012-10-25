@@ -75,19 +75,20 @@
 bgjobL *bgjobs = NULL;
 
 int fgJobPid = 0;
+char* fgJobCmd = NULL;
 
 /* All aliased commands */
 Alias *aliases = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
-static void RunCmdFork(commandT*, bool);
+static void RunCmdFork(commandT*, char*, bool);
 /* runs an external program command after some checks */
-static void RunExternalCmd(commandT*, bool);
+static void RunExternalCmd(commandT*, char*, bool);
 /* resolves the path and checks for exutable flag */
 static void ResolveExternalCmd(commandT* cmd);
 /* forks and runs a external program */
-static void Exec(commandT*, bool, bool);
+static void Exec(commandT*, char*, bool, bool);
 /* runs a builtin command */
 static void RunBuiltInCmd(commandT*);
 /* checks whether a command is a builtin command */
@@ -97,15 +98,22 @@ static int fileExists(char *path);
 /* sets an environment variable using strcpy */
 static void setEnvVar(commandT* cmd);
 /* adds a pid to the bg job list  */
-static void AddBgJob(pid_t pid);
+void AddBgJob(pid_t pid, jobStatus status, char* cmdLine);
 /* removes a pid from the bg job list */
-void RmBgJobPid(pid_t pid);
+void RmBgJobPid(pid_t pid, jobStatus status);
 /* prints a job when it's status changes */
 static void printJob(bgjobL*,int jobNum);
+/* clean up the job list and print out changed statuses  */
+static void updateJobs();
 /* frees a bgjobl struct  */
-static void freeBgJob(bgjobL* job);
+void freeBgJob(bgjobL* job);
+/* waits for the foreground process and reaps zombie children */
+static void waitFg(pid_t);
+/* finds a job in the bg job list */
+static int findBgJob(pid_t pid, bgjobL** job);
 /************External Declaration*****************************************/
-
+extern commandT *copyCommand(commandT* cmd);
+extern void freeCommand(commandT* cmd);
 /**************Implementation***********************************************/
 
 
@@ -119,10 +127,10 @@ static void freeBgJob(bgjobL* job);
  *
  * Runs the given command.
  */
-void RunCmd(commandT* cmd)
+void RunCmd(commandT* cmd, char* cmdLine)
 {
   fflush(stdout);
-  RunCmdFork(cmd, TRUE);
+  RunCmdFork(cmd, cmdLine, TRUE);
 } /* RunCmd */
 
 
@@ -138,7 +146,7 @@ void RunCmd(commandT* cmd)
  * Runs a command, switching between built-in and external mode
  * depending on cmd->argv[0].
  */
-void RunCmdFork(commandT* cmd, bool fork)
+void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
 {
   int i;
   commandT *cmd2;
@@ -182,7 +190,7 @@ void RunCmdFork(commandT* cmd, bool fork)
         cmd->ioRedirectPath = cmd->argv[i + 1];
       }
     }
-    RunExternalCmd(cmd, fork);
+    RunExternalCmd(cmd, cmdLine, fork);
   }
 } /* RunCmdFork */
 
@@ -215,10 +223,10 @@ void RunCmdPipe(commandT* cmd1, commandT* cmd2)
  *
  * Tries to run an external command.
  */
-static void RunExternalCmd(commandT* cmd, bool fork)
+static void RunExternalCmd(commandT* cmd, char* cmdLine, bool fork)
 {
   ResolveExternalCmd(cmd);
-  Exec(cmd, fork, cmd->bg);
+  Exec(cmd, cmdLine, fork, cmd->bg);
 }  /* RunExternalCmd */
 
 
@@ -303,11 +311,10 @@ static void ResolveExternalCmd(commandT* cmd)
  *
  * Executes a command.
  */
-static void Exec(commandT* cmd, bool forceFork, bool bg)
+static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
 {
   pid_t child;
   int status = -1;
-  int pid = 0;
   int ioRedirectFile = -1;
   sigset_t signals;
 
@@ -323,18 +330,15 @@ static void Exec(commandT* cmd, bool forceFork, bool bg)
     {
       if (bg)
       {
-        AddBgJob(child);
+        AddBgJob(child, RUNNING, strndup(cmdLine, strlen(cmdLine)));
         sigprocmask(SIG_UNBLOCK, &signals, NULL);
-        printf("Bg job: %x\n", child);
       }
       else
       {
-        sigprocmask(SIG_UNBLOCK, &signals, NULL);
         fgJobPid = child;
-        do
-        {
-          pid = waitpid(child, &status, 0);
-        } while (pid > 0);
+        fgJobCmd = strndup(cmdLine, strlen(cmdLine));
+        sigprocmask(SIG_UNBLOCK, &signals, NULL);
+        waitFg(child);
         status = WEXITSTATUS(status);
       }
     }
@@ -474,7 +478,7 @@ static void RunBuiltInCmd(commandT* cmd)
 
     while(job_i != NULL)
       {
-	printf("[%x] Pid: %x\n", i, job_i->pid);
+        printJob(job_i, i);
 	job_i = job_i->next;
 	i++;
       }
@@ -559,24 +563,58 @@ static void setEnvVar(commandT* cmd) {
  */
 void CheckJobs()
 {
+    int i=1;
+  bgjobL *prev, *job_i;
+  prev = NULL;
+  job_i = bgjobs;
+  if (bgjobs == NULL)
+    return;
+  while (job_i != NULL)
+  {
+    if(job_i->changed)
+      printJob(job_i, i);
+    if (job_i->status == DONE)
+    {
+      if(job_i == bgjobs)
+      {
+        // remove from list and make job_i->next the head
+        bgjobs =  job_i->next;
+        freeBgJob(job_i);
+        job_i = bgjobs;
+      }
+      else
+      {
+        // remove from list and make prev->next = job_i->next
+        prev->next = job_i->next;
+        freeBgJob(job_i);
+        job_i = prev->next;
+      }
+    }
+    else
+    {
+      prev = job_i;
+      job_i = job_i->next;
+    }
+    i++;
+  }
 } /* CheckJobs */
 
 /*
- * StopFgProc
+ * KillFgProc
  *
- * arguments: none
+ * arguments: int signo: the signal to forward
  *
  * returns: none
  *
- * Kills the fg process if there is one
+ * Sends signal to the fg process if there is one
  */
-int StopFgProc()
+int KillFgProc(int signo)
 {
   int ret;
   if (!fgJobPid)
     return -1;
 
-  ret = kill(-1 * fgJobPid, SIGINT);
+  ret = kill(-1 * fgJobPid, signo);
   if (ret == 0)
     fgJobPid = 0;
 
@@ -608,16 +646,22 @@ static int fileExists(char *path)
  * AddBgJob
  *
  * arguments pid_t pid: pid of bg process
- *
+ *           jobStatus status: status of the process
+ *           commandT* command: the command struct from the call for this job
+ *           
  * returns: none
  * 
  * This function adds the pid to the end of the bg job list
+ * cmd will be freed when the job is freed so don't free it anywhere else!
  *
  */
-void AddBgJob(pid_t pid)
+void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
 {
   bgjobL* new_bgjob = malloc(sizeof(bgjobL));
   new_bgjob->pid = pid;
+  new_bgjob->status = status;
+  new_bgjob->cmdLine = cmdLine;
+  new_bgjob->changed = FALSE;
   new_bgjob->next = NULL;
   if (bgjobs == NULL)
   {
@@ -637,45 +681,29 @@ void AddBgJob(pid_t pid)
 }
 
 /*
- * RmBgJobPid
+ * UpdateBgJob
  *
  * arguments pid_t pid: pid of process that has completed
  * 
  * returns: none
  * 
- * This function removes a bg job from the bg job list by pid
+ * This function updates a bg job in the bg job list by pid
  *
  */
-void RmBgJobPid(pid_t pid)
+void UpdateBgJob(pid_t pid, jobStatus status)
 {
-  bgjobL* i = bgjobs;
-  int jobNum = 1; // change this later to be in the job struct
-  if (i != NULL) {
-    if (i->pid == pid)
-    {
-      // it's the first element of the list
-      bgjobs = i->next;
-      printJob(i, jobNum);
-      freeBgJob(i);
-      return;
-    }
-    jobNum++;
-    // find the element of the list before the one we want to remove
-    while(i->next != NULL)
-    {
-      if (i->next->pid == pid)
-      {
-        // remove the job from the list and free the memory
-        bgjobL* toFree = i->next;
-        i->next = i->next->next;
-        printJob(toFree, jobNum);
-        freeBgJob(toFree);
-        return;
-      }
-      jobNum++;
-    }
+  bgjobL* job;
+  int jobNum;
+
+  jobNum = findBgJob(pid, &job);
+
+  if (job != NULL)
+  {
+    job->status = status;
+    job->changed = TRUE;
   }
-  fprintf(stderr, "job not found");
+  else
+    fprintf(stderr, "job not found");
 }
 
 /*
@@ -683,7 +711,26 @@ void RmBgJobPid(pid_t pid)
  */
 static void printJob(bgjobL* bgjob, int jobNum)
 {
-  printf("[%x]  Done\tPid=%d\n", jobNum, bgjob->pid);
+  printf("[%x]   ", jobNum);
+  switch(bgjob->status)
+  {
+    case DONE:
+      printf("Done");
+      break;
+    case STOPPED:
+      printf("Stopped");
+      break;
+    case RUNNING:
+      printf("Running");
+      break;
+    default:
+      printf("WTF");
+  }
+  bgjob->changed = FALSE;
+  printf("\t\t");
+  printf("%s ", bgjob->cmdLine);
+
+  printf("\n");
 }
 
 /*
@@ -691,7 +738,55 @@ static void printJob(bgjobL* bgjob, int jobNum)
  *
  * frees the job struct
  */
-static void freeBgJob(bgjobL* job)
+void freeBgJob(bgjobL* job)
 {
+  free(job->cmdLine);
   free(job);
 }
+
+/*
+ * waitFg
+ *
+ * arguments: pid_t child, the pid of the child proc
+ *
+ * returns: 
+ *
+ * Waits for fg process to revert control.
+ * Depends on  sigChldHandler handling job control
+ */
+static void waitFg(pid_t child)
+{
+  while (fgJobPid == child);
+}
+
+/*
+ * toJobStatus
+ */
+jobStatus toJobStatus(int status)
+{
+  if (WIFEXITED(status)) {
+    return DONE;
+  }
+  if (WIFSTOPPED(status)) {
+    return STOPPED;
+  }
+  return DONE;
+}
+
+/*
+ * findBgJob
+ *
+ * returns the jobNumber, sets (*bgjobL) to NULL if job not found
+ */ 
+int findBgJob(pid_t pid, bgjobL** job)
+{
+  int i = 0;
+  *job = bgjobs;
+  while((*job)->pid != pid && (*job) != NULL)
+  {
+    (*job) = (*job)->next;
+    i++;
+  }
+  return i;
+}
+  

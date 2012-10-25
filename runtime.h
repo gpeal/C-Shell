@@ -70,9 +70,20 @@ typedef struct command_t
   char* argv[];
 } commandT;
 
+typedef enum 
+{
+  RUNNING,
+  STOPPED,
+  DONE
+} jobStatus;
+
+
 typedef struct bgjob_l
 {
   pid_t pid;
+  jobStatus status;
+  bool changed;
+  char* cmdLine;
   struct bgjob_l* next;
 } bgjobL;
 
@@ -103,7 +114,7 @@ VAREXTERN(bool forceExit, FALSE);
  *    Input: a command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void RunCmd(commandT*);
+EXTERN void RunCmd(commandT*, char*);
 
 /***********************************************************************
  *  Title: Runs two command with a pipe
@@ -117,11 +128,12 @@ EXTERN void RunCmdPipe(commandT*, commandT*);
 /***********************************************************************
  *  Title: Stop the foreground process
  * ---------------------------------------------------------------------
- *    Purpose: Stops the current foreground process if there is any.
- *    Input: void
+ *    Purpose: Sends a signal to the current foreground process if there
+ *             is any.
+ *    Input: a signal number
  *    Output: errno
  ***********************************************************************/
-EXTERN int StopFgProc();
+EXTERN int KillFgProc(int);
 /***********************************************************************
  *  Title: Create a command structure
  * ---------------------------------------------------------------------
@@ -170,7 +182,10 @@ EXTERN void CheckJobs();
 /*
  * 
  */ 
-EXTERN void RmBgJobPid(pid_t);
+EXTERN void UpdateBgJob(pid_t pid, jobStatus status);
+EXTERN void AddBgJob(pid_t pid, jobStatus status, char* cmd);
+EXTERN jobStatus toJobStatus(int);
+EXTERN void freeBgJob(bgjobL*);
 /************External Declaration*****************************************/
 
 /**************Definition***************************************************/
