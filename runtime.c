@@ -197,89 +197,89 @@
  * Runs two commands, redirecting standard output from the first to
  * standard input on the second.
  */
-/* void RunCmdPipe(commandT* cmd1, commandT* cmd2)
+ void RunCmdPipe(commandTLinked* cmd)
  {
   pid_t child;
   int status = -1;
-  int pipe_status = -1;
-  int pid = 0;
+  child = fork();
 
-  fprintf (stdout,"executing %s () %s \n", cmd1->name, cmd2->argv[0]);
-  if ((child = fork()) > 0) // the shell parent process
-  {
-    fgJobPid = child;
-    fprintf (stdout,"waiting in super parent \n");
-
-    do
+   if(child >= 0) // fork was successful
+   {
+        if(child == 0) // child process
+        {
+          RunCmdPipeRecurse(cmd);
+          exit(1);
+        } else //Parent process
+        {
+          status = waitpid(child, &status, 0);
+          if(status == -1){
+            perror("Wait Fail");
+          }
+          status = WEXITSTATUS(status);
+          exit(status);
+        }
+      }
+    else // fork failed
     {
-      pid = waitpid(child, &status, 0);
-    } while (pid > 0);
-    status = WEXITSTATUS(status);
-    fprintf (stdout,"done in super parent \n");
-    // RunCmd(cmd2);
-    fflush(stdout);
-  }
-  else if (child == 0) // the pipe (parent)child process
-  {
+      perror("Fork failed!\n");
+    }
 
-    // set the group id to the pid so it can be killed properly
-    if (setpgid(0, 0) != 0)
-      PrintPError("Error setting child gid\n");
-    // if the command could not be resolved, argc is set to 0
-    pid_t pipes_child;
-    fprintf (stdout,"setting pipe \n");
-
+ } /* RunCmdPipe */
+ /*
+  *
+  *
+  */
+  void RunCmdPipeRecurse(commandTLinked* cmd){
     int fd[2];
     pipe(fd);
+    int grandchild_status = -1;
+    if(cmd->next != NULL){
+      pid_t grandchild;
 
-    if ((pipes_child = fork()) > 0) {
-      // the pipe parent
+      grandchild = fork();
 
-      close(fd[1]);
-      dup2(fd[0], STDIN_FILENO);
-      close(fd[0]);
-      fprintf (stdout,"waiting %s in pipe parent\n", cmd2->argv[0]);
-
-       do
-        {
-          // fprintf (stdout,"waiting %s in pipe parent...\n", cmd2->argv[0]);
-          pid = waitpid(pipes_child, &pipe_status, 0);
-        } while (pid > 0);
-
-      pipe_status = WEXITSTATUS(pipe_status);
-      fprintf (stdout,"executing %s in pipe parent\n", cmd2->argv[0]);
-      char readbuffer[100];
-      fscanf (fd[0], "%s", readbuffer);
-      int nbytes = read(stdin, readbuffer, sizeof(readbuffer));
-      // printf("%i\n", nbytes);
-      fprintf (stdout,"buffer: %s\n", readbuffer);
-      fprintf (stdout,"exiting parent\n");
-      exit(pipe_status);
-    }
-    else if (pipes_child == 0) //  the pipes child process
+    if(grandchild == 0) // grandchild process
     {
-      fprintf (stdout,"executing %s in pipe child: %i \n", cmd1->argv[0], cmd1->argc);
+     close(fd[0]); //close read from pipe
+     dup2(fd[1], STDOUT_FILENO); // Replace stdout with the write end of the pipe
+     close(fd[1]);
+     RunCmdPipeRecurse(cmd->next);
+     ResolveExternalCmd(cmd->cmd);
+     grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
+
+     if(grandchild_status == -1){
+      perror("Execv Fail");
+    }
+    exit(1);
+  }
+    else //child process
+    {
+      close(fd[1]); //close write to pipe
+      dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
       close(fd[0]);
-      dup2(fd[1], STDOUT_FILENO);
-      close(fd[1]);
-      cmd1->argv[cmd1->argc] = NULL;
-      if(cmd1->argc > 0)
-      {
-        fprintf (stdout,"exec in child %s %s\n", cmd1->argv[0], cmd1->argv[1]);
-        pipe_status = execvp(cmd1->argv[0], cmd1->argv);
-        if(pipe_status == -1){
-        perror("execve error");
-     }
+
+      grandchild_status = waitpid(grandchild, &grandchild_status, 0);
+      if(grandchild_status == -1){
+        perror("Wait Fail");
       }
-      else if (cmd1->argc == 0)
-      {
-        printf("./tsh-ref: line 1: %s: No such file or directory\n", cmd1->name);
-      }
-      fprintf (stdout,"exiting\n");
-      exit(pipe_status);
+      grandchild_status = WEXITSTATUS(grandchild_status);
+      exit(grandchild_status);
     }
   }
-} *//* RunCmdPipe */
+  else{
+      close(fd[0]); //close read from pipe
+      dup2(fd[1], STDOUT_FILENO); // Replace stdout with the write end of the pipe
+      close(fd[1]);
+
+      ResolveExternalCmd(cmd->cmd);
+
+      grandchild_status = execv(cmd->cmd->name, cmd->cmd->argv);
+      if(grandchild_status == -1){
+        perror("Execv Fail");
+      }
+    }
+  }
+ /* RunCmdPipe */
 
 
 /*
@@ -293,8 +293,8 @@
  * Takes a commandT* that has multiple piped commands and structures them into an array of individual commands
  * This also reverses the order of the commands for use by RunCmdFork
  */
-static commandTLinked *parsePipedCmd(commandT* cmd)
-{
+ static commandTLinked *parsePipedCmd(commandT* cmd)
+ {
   int i = 0;
   int i2 = 0;
   int argc = 0;
@@ -501,7 +501,7 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
         if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
         {
           ioRedirectFile = open(cmd->ioRedirectPath,
-              ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
+            ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
           if (ioRedirectFile == -1)
           {
             printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
