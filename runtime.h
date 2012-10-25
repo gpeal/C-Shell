@@ -83,6 +83,8 @@ typedef struct alias
   struct alias *next;
 } Alias;
 
+EXTERN Alias *aliases;
+
 /************Global Variables*********************************************/
 
 /***********************************************************************

@@ -104,7 +104,6 @@ void RmBgJobPid(pid_t pid);
 static void printJob(bgjobL*,int jobNum);
 /* frees a bgjobl struct  */
 static void freeBgJob(bgjobL* job);
-static void replaceWithAlias(char *str);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -145,7 +144,6 @@ void RunCmdFork(commandT* cmd, bool fork)
   commandT *cmd2;
   if (cmd->argc <= 0)
     return;
-  replaceWithAlias(cmd->argv[0]);
   if (IsBuiltIn(cmd->argv[0]))
   {
     RunBuiltInCmd(cmd);
@@ -532,22 +530,6 @@ static void RunBuiltInCmd(commandT* cmd)
     }
   }
 } /* RunBuiltInCmd */
-
-static void replaceWithAlias(char *str)
-{
-  Alias *alias = aliases;
-  while(alias != NULL)
-  {
-    if (!strcmp(str, alias->from))
-    {
-      printf("Replacing %s with %s\n", str, alias->to);
-      free(str);
-      str = malloc(sizeof(char) * strlen(alias->to) + 1);
-      strcpy(str, alias->to);
-    }
-    alias = alias->next;
-  }
-}
 
 static void setEnvVar(commandT* cmd) {
   char *str = malloc(64 * sizeof(char));

@@ -68,6 +68,8 @@ typedef struct string_l
 int BUFSIZE = 512;
 int MAXARGS = 100;
 
+EXTERN Alias *aliases;
+
 /**************Function Prototypes******************************************/
 
 commandT* getCommand(char* cmdLine);
@@ -118,6 +120,8 @@ void Interpret(char* cmdLine)
  */
 commandT* getCommand(char* cmdLine)
 {
+  Alias *alias;
+  char *aliasTmp;
   commandT* cmd = malloc(sizeof(commandT) + sizeof(char*) * MAXARGS);
   cmd->argv[0] = 0;
   cmd->name = 0;
@@ -128,6 +132,27 @@ commandT* getCommand(char* cmdLine)
   int i, inArg = 0;
   char quote = 0;
   char escape = 0;
+  //check aliases
+  alias = aliases;
+  while (alias != NULL)
+  {
+    if (strncmp(cmdLine, alias->from, strlen(alias->from)) == 0 && (cmdLine[strlen(alias->from)] == ' ') || (cmdLine[strlen(alias->from)] == '\0'))
+    {
+      aliasTmp = malloc(sizeof(char*) * BUFSIZE);
+      strcpy(aliasTmp, alias->to);
+      // only cat the rest of cmdLine if there was more of it
+      if (*(cmdLine + (sizeof(char) * strlen(alias->from))) != '\0')
+      {
+        strcat(aliasTmp, cmdLine + (sizeof(char) * strlen(alias->to)));
+      }
+      /*printf("Alias From: %s\n", alias->from);
+      printf("Alias To: %s\n", alias->to);
+      printf("cmdLine: %s->%s\n", cmdLine, aliasTmp);*/
+      strcpy(cmdLine, aliasTmp);
+      free(aliasTmp);
+    }
+    alias = alias->next;
+  }
 
   // Set up the initial empty argument
   char* tmp = malloc(sizeof(char*) * BUFSIZE);
