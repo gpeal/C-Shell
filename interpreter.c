@@ -141,7 +141,7 @@ commandT* getCommand(char* cmdLine)
   alias = aliases;
   while (alias != NULL)
   {
-    if (strncmp(cmdLine, alias->from, strlen(alias->from)) == 0 && (cmdLine[strlen(alias->from)] == ' ') || (cmdLine[strlen(alias->from)] == '\0'))
+    if (strncmp(cmdLine, alias->from, strlen(alias->from)) == 0 && ((cmdLine[strlen(alias->from)] == ' ') || (cmdLine[strlen(alias->from)] == '\0')))
     {
       aliasTmp = malloc(sizeof(char*) * BUFSIZE);
       strcpy(aliasTmp, alias->to);

@@ -104,7 +104,7 @@ void RmBgJobPid(pid_t pid, jobStatus status);
 /* prints a job when it's status changes */
 static void printJob(bgjobL*,int jobNum);
 /* clean up the job list and print out changed statuses  */
-static void updateJobs();
+void CheckJobs();
 /* frees a bgjobl struct  */
 void freeBgJob(bgjobL* job);
 /* waits for the foreground process and reaps zombie children */
