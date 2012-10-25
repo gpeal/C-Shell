@@ -349,17 +349,6 @@
   ResolveExternalCmd(pipedCmdCurrent->cmd);
   pipedCmdCurrent = pipedCmdHead;
 
-  while (pipedCmdCurrent != NULL)
-  {
-    printf("%i: ", pipedCmdCurrent->cmd->argc);
-    for (i = 0; i < pipedCmdCurrent->cmd->argc; i++)
-    {
-      printf("%s ", pipedCmdCurrent->cmd->argv[i]);
-    }
-    printf("\n");
-    pipedCmdCurrent = pipedCmdCurrent->next;
-  }
-
   return pipedCmdHead;
 }
 
