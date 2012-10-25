@@ -108,9 +108,9 @@ int main(int argc, char *argv[])
     job = bgjobs;
     while(job != NULL)
     {
-      tmp = job;
+      tmp = job->next;
       freeBgJob(job);
-      job = tmp->next;
+      job = tmp;
     }
   }
   return 0;
@@ -173,6 +173,7 @@ static void sigChldHandler(int signo)
         fgJobCmd = NULL;
         return;
       }
+      printf("Chid pid: %d\n Fg pid: %d\n", child, fgJobPid);
       // it's a bg job, update it in the job list
       UpdateBgJob(child, toJobStatus(stat));
     }
