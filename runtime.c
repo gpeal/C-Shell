@@ -297,13 +297,10 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
 {
   int i = 0;
   int i2 = 0;
-  int i3 = 0;
   int argc = 0;
-  char tmp;
   char *argv;
   commandTLinked *pipedCmdHead;
   commandTLinked *pipedCmdCurrent = NULL;
-  commandTLinked *pipedCmdTmp;
 
   for (i = cmd->argc - 1; i >= 0; i--)
   {
@@ -314,6 +311,7 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
       continue;
     }
     // argv[i]  "|"
+    // the first time we have to set the new piped command to the head command
     if (!pipedCmdCurrent)
     {
       pipedCmdHead = malloc(sizeof(commandTLinked));
@@ -325,12 +323,9 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
       pipedCmdCurrent->next = malloc(sizeof(commandTLinked));
       pipedCmdCurrent = pipedCmdCurrent->next;
     }
-    pipedCmdCurrent->cmd = malloc(sizeof(commandT *) + sizeof(char*) * (argc + 1));
+
+    pipedCmdCurrent->cmd = malloc(sizeof(commandT) + sizeof(char*) * (argc + 1));
     pipedCmdCurrent->cmd->argc = argc;
-    for (i2 = 0; i2 < argc; i2++)
-    {
-      pipedCmdCurrent->cmd->argv[i2] = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
-    }
     for (i2 = 0; i2 < argc; i2++)
     {
       argv = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
@@ -338,6 +333,9 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
       pipedCmdCurrent->cmd->argv[i2] = argv;
       free(cmd->argv[i + 1 + i2]);
     }
+    pipedCmdCurrent->cmd->argv[i2] = 0;
+    pipedCmdCurrent->cmd->name = pipedCmdCurrent->cmd->argv[0];
+    ResolveExternalCmd(pipedCmdCurrent->cmd);
     free(cmd->argv[i]);
     cmd->argv[i] = 0;
     argc = 0;
@@ -348,8 +346,8 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
   pipedCmdCurrent->cmd = cmd;
   pipedCmdCurrent->cmd->argc = argc;
   pipedCmdCurrent->next = NULL;
+  ResolveExternalCmd(pipedCmdCurrent->cmd);
   pipedCmdCurrent = pipedCmdHead;
-  pipedCmdHead = pipedCmdCurrent;
 
   while (pipedCmdCurrent != NULL)
   {
