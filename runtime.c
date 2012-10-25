@@ -297,7 +297,10 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
 {
   int i = 0;
   int i2 = 0;
+  int i3 = 0;
   int argc = 0;
+  char tmp;
+  char *argv;
   commandTLinked *pipedCmdHead;
   commandTLinked *pipedCmdCurrent = NULL;
   commandTLinked *pipedCmdTmp;
@@ -310,24 +313,29 @@ static commandTLinked *parsePipedCmd(commandT* cmd)
       argc++;
       continue;
     }
-    // argv[i] equals "|"
+    // argv[i]  "|"
     if (!pipedCmdCurrent)
     {
-      pipedCmdHead = malloc(sizeof(commandTLinked) + sizeof(char*) * argc);
+      pipedCmdHead = malloc(sizeof(commandTLinked));
       pipedCmdCurrent = pipedCmdHead;
       pipedCmdCurrent->next = NULL;
     }
     else
     {
-      pipedCmdCurrent->next = malloc(sizeof(commandT) + sizeof(char*) * argc);
+      pipedCmdCurrent->next = malloc(sizeof(commandTLinked));
       pipedCmdCurrent = pipedCmdCurrent->next;
     }
-    pipedCmdCurrent->cmd = malloc(sizeof(commandT *));
+    pipedCmdCurrent->cmd = malloc(sizeof(commandT *) + sizeof(char*) * (argc + 1));
     pipedCmdCurrent->cmd->argc = argc;
     for (i2 = 0; i2 < argc; i2++)
     {
       pipedCmdCurrent->cmd->argv[i2] = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
-      strcpy(pipedCmdCurrent->cmd->argv[i2], cmd->argv[i + 1 + i2]);
+    }
+    for (i2 = 0; i2 < argc; i2++)
+    {
+      argv = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
+      strcpy(argv, cmd->argv[i + 1 + i2]);
+      pipedCmdCurrent->cmd->argv[i2] = argv;
       free(cmd->argv[i + 1 + i2]);
     }
     free(cmd->argv[i]);
