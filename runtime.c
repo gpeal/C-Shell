@@ -495,11 +495,10 @@ static void RunBuiltInCmd(commandT* cmd)
     strncpy(to, tmp, (strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char));
     from[(tmp - cmd->argv[1]) / sizeof(char) - 1] = '\0';
     to[(strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char)] = '\0';
-    alias = malloc(sizeof(Alias *));
+    alias = malloc(sizeof(Alias));
     if (aliases == NULL)
     {
       aliases = alias;
-      alias->next = NULL;
     }
     else
     {
