@@ -244,26 +244,18 @@
       if(passed_fd == NULL){
         //right  most command
         fprintf (stderr, "cmd= null: Read: %i Write: %i\n", fd[0], fd[1]);
-        // close(fd[1]); //close write to pipe
         dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
-        // close(fd[0]);
       }
       else if (cmd->next == NULL) {
         //left most command
         fprintf (stderr, "pass null: Read: %i Write: %i\n", passed_fd[1], passed_fd[0]);
-        // close(passed_fd[0]);
         dup2(passed_fd[1], STDOUT_FILENO);
-        // close(passed_fd[0]);
       }
       else {
         fprintf (stderr, "else : Read: %i Write: %i\n", fd[0], fd[1]);
-        close(fd[1]); //close write to pipe
         dup2(fd[0], STDIN_FILENO); // Replace stdin with the read end of the pipe
-        close(fd[0]);
 
-        close(passed_fd[0]);
         dup2(passed_fd[1], STDOUT_FILENO);
-        close(passed_fd[1]);
       }
       if(cmd->next != NULL){
         fprintf (stderr, "executing before recurse: %s\n", cmd->next->cmd->name);
@@ -284,6 +276,9 @@
         perror("Wait Fail");
       }
       grandchild_status = WEXITSTATUS(grandchild_status);
+      if (cmd->next == NULL) {
+        exit(grandchild_status);
+      }
     }
     else{
       perror("Fork Error");
