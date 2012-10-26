@@ -219,7 +219,6 @@ void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
  void RunCmdPipe(commandTLinked* cmd)
  {
   pid_t child;
-  int status = -1;
   child = fork();
 
    if(child >= 0) // fork was successful
@@ -230,11 +229,8 @@ void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
           exit(1);
         } else //Parent process
         {
-          status = waitpid(child, &status, 0);
-          if(status == -1){
-            perror("Wait Fail");
-          }
-          status = WEXITSTATUS(status);
+          fgJobPid = child;
+          waitFg(child);
         }
       }
     else // fork failed
