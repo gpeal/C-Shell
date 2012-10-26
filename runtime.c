@@ -639,8 +639,21 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         else
           printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
       }
-      else
-        printf("%s\n", cmd->argv[1]);
+      else 
+      {
+        int i = 1;
+        for (i = 1; i < cmd->argc; i++)
+        {
+            if(i != cmd->argc - 1)
+            {
+                printf("%s ", cmd->argv[i]);
+            }
+            else
+            {
+                printf("%s\n", cmd->argv[i]);
+            }
+        }
+      }
     }
   }
   else if (!strcmp(cmd->argv[0], "cd"))
