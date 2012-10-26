@@ -87,9 +87,10 @@
  static void Exec(commandT*, bool, bool);
 /* runs a builtin command */
  static void RunBuiltInCmd(commandT*);
- /* turns a piped command into a reverse linked list of the individual commands */
- static commandTLinked *parsePipedCmd(commandT*
-  );
+/* turns a piped command into a reverse linked list of the individual commands */
+ static commandTLinked *parsePipedCmd(commandT*);
+/* Recursively runs all of the commands in a pipe */
+ static void RunCmdPipeRecurse(commandTLinked* cmd, int passed_fd[]);
 /* checks whether a command is a builtin command */
  static bool IsBuiltIn(char*);
 /* checks whether or not a file exists */
@@ -208,7 +209,6 @@
    {
         if(child == 0) // child process
         {
-          printf("%s\n", "Running first recurse");
           RunCmdPipeRecurse(cmd, NULL);
           exit(1);
         } else //Parent process
@@ -226,52 +226,63 @@
     }
 
  } /* RunCmdPipe */
+
  /*
+  * RunCmdPipeRecurse
   *
+  * arguments:
+  *   commandTLinked *cmd: the list of piped commands
+  *   int fdPrevious[]: the pipe from the previous command (NULL for the first one)
+  *
+  * returns: none
+  *
+  * RunCmdPipeRecurse runs a list of piped commands and links their file descriptors
+  * such that the pipes behave as you would expect.
   *
   */
-  void RunCmdPipeRecurse(commandTLinked* cmd, int passed_fd[]){
-    int fd[2];
-    int grandchild_status = -1;
-    pid_t grandchild;
+static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
+{
+  int fd[2];
+  pid_t grandchild;
+
+  if (cmd->next != NULL)
+  {
+    pipe(fd);
+  }
+
+  if ((grandchild = fork()) == 0) // grandchild process
+  {
+    if (fdPrevious != NULL)
+    {
+      dup2(fdPrevious[0], STDIN_FILENO);
+      close(fdPrevious[0]);
+    }
     if (cmd->next != NULL)
     {
-      pipe(fd);
+      dup2(fd[1], STDOUT_FILENO);
+      close(fd[1]);
+      close(fd[0]);
     }
-    grandchild = fork();
-    if(grandchild == 0) // grandchild process
+    execv(cmd->cmd->name, cmd->cmd->argv);
+    exit(1);
+  }
+  else if (grandchild > 0) // child process
+  {
+    if (fdPrevious != NULL)
     {
-      if (passed_fd != NULL)
-      {
-        dup2(passed_fd[0], STDIN_FILENO);
-        close(passed_fd[0]);
-      }
-      if (cmd->next != NULL)
-      {
-        dup2(fd[1], STDOUT_FILENO);
-        close(fd[1]);
-        close(fd[0]);
-      }
-      execv(cmd->cmd->name, cmd->cmd->argv);
-      exit(1);
+      close(fdPrevious[0]);
     }
-    else if (grandchild > 0)//child process
+    if (cmd->next != NULL)
     {
-      if (passed_fd != NULL)
-      {
-        close(passed_fd[0]);
-      }
-      if (cmd->next != NULL)
-      {
-        close(fd[1]);
-        RunCmdPipeRecurse(cmd->next, fd);
-      }
-    }
-    else{
-      perror("Fork Error");
+      close(fd[1]);
+      RunCmdPipeRecurse(cmd->next, fd);
     }
   }
- /* RunCmdPipe */
+  else
+  {
+    perror("Fork Error");
+  }
+} /* RunCmdPipeRecurse */
 
 
 /*
