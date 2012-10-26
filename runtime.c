@@ -100,7 +100,7 @@ static void setEnvVar(commandT* cmd);
 /* adds a pid to the bg job list  */
 void AddBgJob(pid_t pid, jobStatus status, char* cmdLine);
 /* removes a pid from the bg job list */
-void RmBgJobPid(pid_t pid, jobStatus status);
+void RmBgJobPid(pid_t pid);
 /* prints a job when it's status changes */
 static void printJob(bgjobL*,int jobNum);
 /* clean up the job list and print out changed statuses  */
@@ -109,8 +109,10 @@ void CheckJobs();
 void freeBgJob(bgjobL* job);
 /* waits for the foreground process and reaps zombie children */
 static void waitFg(pid_t);
-/* finds a job in the bg job list */
-static int findBgJob(pid_t pid, bgjobL** job);
+/* finds a job in the bg job list by pid */
+static int findBgJobPid(pid_t pid, bgjobL** job);
+/* finds a job in the bg job list by job number */
+static bgjobL *findBgJobNum(int jobNum);
 /************External Declaration*****************************************/
 extern commandT *copyCommand(commandT* cmd);
 extern void freeCommand(commandT* cmd);
@@ -419,6 +421,8 @@ static bool IsBuiltIn(char* cmd)
     return TRUE;
   else if (!strcmp(cmd, "bg"))
     return TRUE;
+  else if (!strcmp(cmd, "fg"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -547,24 +551,41 @@ static void RunBuiltInCmd(commandT* cmd)
   }
   else if (!strcmp(cmd->argv[0], "bg"))
   {
-    int i, jobNum;
-    bgjobL *job = bgjobs;
+    int jobNum;
+    bgjobL *job;
 
-    i = 1;
     if (cmd->argc <= 1)
       return;
+
     jobNum = atoi(cmd->argv[1]);
-    while (job != NULL && i <= jobNum)
+    job = findBgJobNum(jobNum);
+
+    if (job != NULL && job->status != RUNNING)
     {
-      if (jobNum == i)
-      {
-        if (job->status != RUNNING)
-        {
-          job->status = RUNNING;
-          kill(-1 * job->pid, SIGCONT);
-        }
-        return;
-      }
+      job->status = RUNNING;
+      kill(-1 * job->pid, SIGCONT);
+    }
+  }
+  else if (!strcmp(cmd->argv[0], "fg"))
+  {
+    int jobNum;
+    bgjobL *job;
+
+    if (cmd->argc <= 1)
+      return;
+
+    jobNum = atoi(cmd->argv[1]);
+    job = findBgJobNum(jobNum);
+
+    if(job != NULL && job->status != RUNNING)
+    {
+
+      job->status = RUNNING;
+      fgJobPid = job->pid;
+      fgJobCmd = strndup(job->cmdLine, strlen(job->cmdLine));
+      kill(-1 * job->pid, SIGCONT);
+      RmBgJobPid(job->pid);
+      waitFg(fgJobPid);
     }
   }
 } /* RunBuiltInCmd */
@@ -725,7 +746,7 @@ void UpdateBgJob(pid_t pid, jobStatus status)
   bgjobL* job;
   int jobNum;
 
-  jobNum = findBgJob(pid, &job);
+  jobNum = findBgJobPid(pid, &job);
 
   if (job != NULL)
   {
@@ -804,11 +825,11 @@ jobStatus toJobStatus(int status)
 }
 
 /*
- * findBgJob
+ * findBgJobPid
  *
  * returns the jobNumber, sets (*bgjobL) to NULL if job not found
  */ 
-int findBgJob(pid_t pid, bgjobL** job)
+int findBgJobPid(pid_t pid, bgjobL** job)
 {
   int i = 0;
   *job = bgjobs;
@@ -819,4 +840,53 @@ int findBgJob(pid_t pid, bgjobL** job)
   }
   return i;
 }
+/*
+ * findBgJobNum
+ */
+static bgjobL *findBgJobNum(int jobNum)
+{
+  int i = 1;
+  bgjobL *job = bgjobs;
   
+  while (job != NULL && i <= jobNum)
+  {
+    if (jobNum == i)
+      return job;
+    job = job->next;
+    i++;
+  }
+  return NULL;
+}
+
+void RmBgJobPid(pid_t pid)
+{
+  bgjobL *job, *prev;
+  findBgJobPid(pid, &job);
+
+  prev = NULL;
+  job = bgjobs;
+
+  if (bgjobs == NULL)
+    return;
+
+  while (job != NULL)
+  {
+    if (job->pid == pid)
+    {
+      if (job == bgjobs)
+      {
+        // first job in the list
+        bgjobs = job->next;
+      }
+      else
+      {
+        // not the first element of the list
+        prev->next = job->next;
+      }
+      freeBgJob(job);
+      return;
+    }
+    prev = job;
+    job = job->next;
+  }
+}
