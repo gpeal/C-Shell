@@ -771,13 +771,13 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     jobNum = atoi(cmd->argv[1]);
     job = findBgJobNum(jobNum);
 
-    if(job != NULL && job->status != RUNNING)
+    if(job != NULL)
     {
-
       job->status = RUNNING;
       fgJobPid = job->pid;
       fgJobCmd = strndup(job->cmdLine, strlen(job->cmdLine));
-      kill(-1 * job->pid, SIGCONT);
+      if (job->status != RUNNING)
+        kill(-1 * job->pid, SIGCONT);
       RmBgJobPid(job->pid);
       waitFg(fgJobPid);
       fflush(stdout);
