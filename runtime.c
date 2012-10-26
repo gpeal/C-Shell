@@ -615,8 +615,6 @@ int KillFgProc(int signo)
     return -1;
 
   ret = kill(-1 * fgJobPid, signo);
-  if (ret == 0)
-    fgJobPid = 0;
 
   return ret;
 }
@@ -658,6 +656,7 @@ static int fileExists(char *path)
 void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
 {
   bgjobL* new_bgjob = malloc(sizeof(bgjobL));
+  int i = 1;
   new_bgjob->pid = pid;
   new_bgjob->status = status;
   new_bgjob->cmdLine = cmdLine;
@@ -671,12 +670,18 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
   else
   {
     // add to end of list
-    bgjobL* i = bgjobs;
-    while(i->next != NULL)
+    bgjobL* job_i = bgjobs;
+    while(job_i->next != NULL)
     {
-      i = i->next;
+      job_i = job_i->next;
+      i++;
     }  
-    i->next = new_bgjob;
+    job_i->next = new_bgjob;
+  }
+  if (new_bgjob->status == STOPPED)
+  {
+    printf("\n");
+    printJob(new_bgjob, i);
   }
 }
 
@@ -782,7 +787,7 @@ int findBgJob(pid_t pid, bgjobL** job)
 {
   int i = 0;
   *job = bgjobs;
-  while((*job)->pid != pid && (*job) != NULL)
+  while((*job) != NULL && (*job)->pid != pid)
   {
     (*job) = (*job)->next;
     i++;
