@@ -77,7 +77,7 @@ bgjobL *bgjobs = NULL;
 int fgJobPid = 0;
 char* fgJobCmd = NULL;
 
-/* All aliased commands */
+/* All aliased commands * /
 extern Alias *aliases = NULL;
 
 /************Function Prototypes******************************************/
@@ -723,7 +723,6 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     }
     alias->from = from;
     alias->to = to;
-    printf("Aliasing %s to %s\n", from, to);
 
   }
   else if (!strcmp(cmd->argv[0], "unalias"))
