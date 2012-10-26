@@ -725,7 +725,10 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   {
     alias = aliases;
     if (alias == NULL || cmd->argc != 2)
+    {
+      printf("./tsh: line 1: unalias: %s: not found\n", cmd->argv[1]);
       return;
+    }
     if (!strcmp(alias->from, cmd->argv[1]))
       aliases = alias->next;
     while(alias != NULL && alias->next != NULL)
