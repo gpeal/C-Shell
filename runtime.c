@@ -639,7 +639,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         else
           printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
       }
-      else 
+      else
       {
         int i = 1;
         for (i = 1; i < cmd->argc; i++)
@@ -887,9 +887,9 @@ int KillFgProc(int signo)
  * arguments pid_t pid: pid of bg process
  *           jobStatus status: status of the process
  *           commandT* command: the command struct from the call for this job
- *           
+ *
  * returns: none
- * 
+ *
  * This function adds the pid to the end of the bg job list
  * cmd will be freed when the job is freed so don't free it anywhere else!
  *
@@ -917,7 +917,7 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
     {
       job_i = job_i->next;
       i++;
-    }  
+    }
     job_i->next = new_bgjob;
   }
   if (new_bgjob->status == STOPPED)
@@ -931,18 +931,17 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
  * UpdateBgJob
  *
  * arguments pid_t pid: pid of process that has completed
- * 
+ *
  * returns: none
- * 
+ *
  * This function updates a bg job in the bg job list by pid
  *
  */
 void UpdateBgJob(pid_t pid, jobStatus status)
 {
   bgjobL* job;
-  int jobNum;
 
-  jobNum = findBgJobPid(pid, &job);
+  findBgJobPid(pid, &job);
 
   if (job != NULL)
   {
@@ -983,7 +982,7 @@ static void printJob(bgjobL* bgjob, int jobNum)
     printf("%s ", printcmd);
     free(printcmd);
   }
-  else 
+  else
   {
     printf("%s ", bgjob->cmdLine);
   }
@@ -1006,7 +1005,7 @@ void freeBgJob(bgjobL* job)
  *
  * arguments: pid_t child, the pid of the child proc
  *
- * returns: 
+ * returns:
  *
  * Waits for fg process to revert control.
  * Depends on  sigChldHandler handling job control
@@ -1037,7 +1036,7 @@ jobStatus toJobStatus(int status)
  * findBgJobPid
  *
  * returns the jobNumber, sets (*bgjobL) to NULL if job not found
- */ 
+ */
 int findBgJobPid(pid_t pid, bgjobL** job)
 {
   int i = 0;
@@ -1056,7 +1055,7 @@ static bgjobL *findBgJobNum(int jobNum)
 {
   int i = 1;
   bgjobL *job = bgjobs;
-  
+
   while (job != NULL && i <= jobNum)
   {
     if (jobNum == i)
