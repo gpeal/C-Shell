@@ -117,6 +117,8 @@ Alias *aliases = NULL;
  static int findBgJobPid(pid_t pid, bgjobL** job);
 /* finds a job in the bg job list by job number */
  static bgjobL *findBgJobNum(int jobNum);
+/* Removes an ampersand */
+static void removeAmpersand(char **cmdLineAddr);
 /************External Declaration*****************************************/
 extern commandT *copyCommand(commandT* cmd);
 extern void freeCommand(commandT* cmd);
@@ -770,6 +772,9 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     if(job != NULL)
     {
       fgJobPid = job->pid;
+      // remove ampersands
+      removeAmpersand(&(job->cmdLine));
+    
       fgJobCmd = strndup(job->cmdLine, strlen(job->cmdLine));
       if (job->status != RUNNING)
       {
@@ -971,18 +976,17 @@ static void printJob(bgjobL* bgjob, int jobNum)
   }
   bgjob->changed = FALSE;
   printf("\t\t");
-  int len = strlen(bgjob->cmdLine);
+  //  int len = strlen(bgjob->cmdLine);
   if(bgjob->status == DONE)
   {
-    char* printcmd = calloc(len - 1, 1);
-    strncpy(printcmd, bgjob->cmdLine, len - 1);
-    printf("%s ", printcmd);
-    free(printcmd);
+    removeAmpersand(&(bgjob->cmdLine));
+    /* char* printcmd = calloc(len - 1, 1); */
+    /* strncpy(printcmd, bgjob->cmdLine, len - 1); */
+    /* printf("%s ", printcmd); */
+    /* free(printcmd); */
   }
-  else
-  {
-    printf("%s ", bgjob->cmdLine);
-  }
+  printf("%s ", bgjob->cmdLine);
+
   printf("\n");
 }
 
@@ -1094,4 +1098,11 @@ void RmBgJobPid(pid_t pid)
     prev = job;
     job = job->next;
   }
+}
+
+void removeAmpersand(char **cmdLineAddr)
+{
+  char* tmp;
+  tmp = strsep(cmdLineAddr, "&");
+  *cmdLineAddr = tmp;
 }
