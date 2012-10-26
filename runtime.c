@@ -974,8 +974,18 @@ static void printJob(bgjobL* bgjob, int jobNum)
   }
   bgjob->changed = FALSE;
   printf("\t\t");
-  printf("%s ", bgjob->cmdLine);
-
+  int len = strlen(bgjob->cmdLine);
+  if(bgjob->status == DONE)
+  {
+    char* printcmd = calloc(len - 1, 1);
+    strncpy(printcmd, bgjob->cmdLine, len - 1);
+    printf("%s ", printcmd);
+    free(printcmd);
+  }
+  else 
+  {
+    printf("%s ", bgjob->cmdLine);
+  }
   printf("\n");
 }
 
