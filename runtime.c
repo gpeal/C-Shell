@@ -78,7 +78,7 @@ int fgJobPid = 0;
 char* fgJobCmd = NULL;
 
 /* All aliased commands */
-Alias *aliases = NULL;
+extern Alias *aliases = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
