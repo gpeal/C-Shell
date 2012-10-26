@@ -767,6 +767,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
       kill(-1 * job->pid, SIGCONT);
       RmBgJobPid(job->pid);
       waitFg(fgJobPid);
+      fflush(stdout);
     }
   }
 } /* RunBuiltInCmd */
@@ -988,7 +989,10 @@ void freeBgJob(bgjobL* job)
  */
 static void waitFg(pid_t child)
 {
-  while (fgJobPid == child);
+  while (fgJobPid == child)
+  {
+    sleep(0);
+  }
 }
 
 /*
