@@ -173,13 +173,14 @@ static void sigChldHandler(int signo)
         fgJobCmd = NULL;
         return;
       }
-      printf("Chid pid: %d\n Fg pid: %d\n", child, fgJobPid);
+      // printf("Chid pid: %d\n Fg pid: %d\n", child, fgJobPid);
       // it's a bg job, update it in the job list
       UpdateBgJob(child, toJobStatus(stat));
     }
     else
     {
-      fprintf(stdout, "Someone else handled it though\n");
+      //probably a sigcont
+      ;
     }
   }
   else

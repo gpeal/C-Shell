@@ -417,6 +417,8 @@ static bool IsBuiltIn(char* cmd)
     return TRUE;
   else if (!strcmp(cmd, "unalias"))
     return TRUE;
+  else if (!strcmp(cmd, "bg"))
+    return TRUE;
   return FALSE;
 } /* IsBuiltIn */
 
@@ -541,6 +543,28 @@ static void RunBuiltInCmd(commandT* cmd)
         free(aliastmp);
       }
       alias = alias->next;
+    }
+  }
+  else if (!strcmp(cmd->argv[0], "bg"))
+  {
+    int i, jobNum;
+    bgjobL *job = bgjobs;
+
+    i = 1;
+    if (cmd->argc <= 1)
+      return;
+    jobNum = atoi(cmd->argv[1]);
+    while (job != NULL && i <= jobNum)
+    {
+      if (jobNum == i)
+      {
+        if (job->status != RUNNING)
+        {
+          job->status = RUNNING;
+          kill(-1 * job->pid, SIGCONT);
+        }
+        return;
+      }
     }
   }
 } /* RunBuiltInCmd */
@@ -669,6 +693,7 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
   }
   else
   {
+    i++;
     // add to end of list
     bgjobL* job_i = bgjobs;
     while(job_i->next != NULL)
