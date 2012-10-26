@@ -277,6 +277,8 @@ static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
       close(fd[0]);
     }
     execv(cmd->cmd->name, cmd->cmd->argv);
+    free(cmd->cmd->argv);
+    free(cmd->cmd);
     exit(1);
   }
   else if (grandchild > 0) // child process
@@ -547,6 +549,8 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         }
 
         status = execv(cmd->name, cmd->argv);
+        free(cmd->name);
+        free(cmd->argv);
         if (ioRedirectFile != -1)
           close(ioRedirectFile);
       }
@@ -564,6 +568,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   else // no fork
   {
     status = execv(cmd->name, cmd->argv);
+    free(cmd->name);
   }
 } /* Exec */
 
