@@ -77,6 +77,13 @@ typedef enum
   DONE
 } jobStatus;
 
+typedef struct command_t_linked
+{
+  commandT *cmd;
+  struct command_t_linked *next;
+} commandTLinked;
+
+
 
 typedef struct bgjob_l
 {
@@ -123,7 +130,7 @@ EXTERN void RunCmd(commandT*, char*);
  *    Input: two command structure
  *    Output: void
  ***********************************************************************/
-EXTERN void RunCmdPipe(commandT*, commandT*);
+EXTERN void RunCmdPipe(commandTLinked* cmd);
 
 /***********************************************************************
  *  Title: Stop the foreground process

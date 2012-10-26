@@ -82,37 +82,41 @@ Alias *aliases = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
-static void RunCmdFork(commandT*, char*, bool);
+ static void RunCmdFork(commandT*, char*, bool);
 /* runs an external program command after some checks */
-static void RunExternalCmd(commandT*, char*, bool);
+ static void RunExternalCmd(commandT*, char*, bool);
 /* resolves the path and checks for exutable flag */
-static void ResolveExternalCmd(commandT* cmd);
+ static void ResolveExternalCmd(commandT* cmd);
 /* forks and runs a external program */
-static void Exec(commandT*, char*, bool, bool);
+ static void Exec(commandT*, char*, bool, bool);
 /* runs a builtin command */
-static void RunBuiltInCmd(commandT*);
+ static void RunBuiltInCmd(commandT*);
+/* turns a piped command into a reverse linked list of the individual commands */
+ static commandTLinked *parsePipedCmd(commandT*);
+/* Recursively runs all of the commands in a pipe */
+ static void RunCmdPipeRecurse(commandTLinked* cmd, int passed_fd[]);
 /* checks whether a command is a builtin command */
-static bool IsBuiltIn(char*);
+ static bool IsBuiltIn(char*);
 /* checks whether or not a file exists */
-static int fileExists(char *path);
+ static int fileExists(char *path);
 /* sets an environment variable using strcpy */
-static void setEnvVar(commandT* cmd);
+ static void setEnvVar(commandT* cmd);
 /* adds a pid to the bg job list  */
-void AddBgJob(pid_t pid, jobStatus status, char* cmdLine);
+ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine);
 /* removes a pid from the bg job list */
-void RmBgJobPid(pid_t pid);
+ void RmBgJobPid(pid_t pid);
 /* prints a job when it's status changes */
-static void printJob(bgjobL*,int jobNum);
+ static void printJob(bgjobL*,int jobNum);
 /* clean up the job list and print out changed statuses  */
-void CheckJobs();
+ void CheckJobs();
 /* frees a bgjobl struct  */
-void freeBgJob(bgjobL* job);
+ void freeBgJob(bgjobL* job);
 /* waits for the foreground process and reaps zombie children */
-static void waitFg(pid_t);
+ static void waitFg(pid_t);
 /* finds a job in the bg job list by pid */
-static int findBgJobPid(pid_t pid, bgjobL** job);
+ static int findBgJobPid(pid_t pid, bgjobL** job);
 /* finds a job in the bg job list by job number */
-static bgjobL *findBgJobNum(int jobNum);
+ static bgjobL *findBgJobNum(int jobNum);
 /************External Declaration*****************************************/
 extern commandT *copyCommand(commandT* cmd);
 extern void freeCommand(commandT* cmd);
@@ -129,10 +133,10 @@ extern void freeCommand(commandT* cmd);
  *
  * Runs the given command.
  */
-void RunCmd(commandT* cmd, char* cmdLine)
-{
-  fflush(stdout);
-  RunCmdFork(cmd, cmdLine, TRUE);
+ void RunCmd(commandT* cmd, char* cmdLine)
+ {
+   fflush(stdout);
+   RunCmdFork(cmd, cmdLine, TRUE);
 } /* RunCmd */
 
 
@@ -151,31 +155,34 @@ void RunCmd(commandT* cmd, char* cmdLine)
 void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
 {
   int i;
-  commandT *cmd2;
+  bool pipe = FALSE;
+  char *quotPtr;
+  for(i = 0; cmd->argv[i] != 0; i++)
+  {
+    quotPtr = strrchr(cmd->argv[i], '|');
+    if(quotPtr != NULL){
+      pipe = TRUE;
+    }
+  }
   if (cmd->argc <= 0)
     return;
   if (IsBuiltIn(cmd->argv[0]))
   {
     RunBuiltInCmd(cmd);
   }
+  else if (pipe)
+  {
+    //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
+    commandTLinked *cmdt = parsePipedCmd(cmd);
+    RunCmdPipe(cmdt);
+    return;
+  }
   else
   {
     for(i = 0; cmd->argv[i] != 0; i++)
     {
-      if (strcmp(cmd->argv[i], "|") == 0)
-      {
-        //make a new commandT and set its argv to the argv from cmd1 that are after the pipe
-        cmd2 = malloc(sizeof(commandT));
-        cmd2->argc = cmd->argc - i;
-        *cmd2->argv = cmd->argv[i + 1];
-        //terminate cmd argv prior to the pipe
-        cmd->argc = i;
-        free(cmd->argv[i]);
-        cmd->argv[i] = 0;
-        RunCmdPipe(cmd, cmd2);
-        return;
-      }
-      else if(strcmp(cmd->argv[i], ">") == 0)
+
+      if(strcmp(cmd->argv[i], ">") == 0)
       {
         cmd->argc = i;
         free(cmd->argv[i]);
@@ -209,9 +216,183 @@ void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
  * Runs two commands, redirecting standard output from the first to
  * standard input on the second.
  */
-void RunCmdPipe(commandT* cmd1, commandT* cmd2)
+ void RunCmdPipe(commandTLinked* cmd)
+ {
+  pid_t child;
+  int status = -1;
+  child = fork();
+
+   if(child >= 0) // fork was successful
+   {
+        if(child == 0) // child process
+        {
+          RunCmdPipeRecurse(cmd, NULL);
+          exit(1);
+        } else //Parent process
+        {
+          status = waitpid(child, &status, 0);
+          if(status == -1){
+            perror("Wait Fail");
+          }
+          status = WEXITSTATUS(status);
+        }
+      }
+    else // fork failed
+    {
+      perror("Fork failed!\n");
+    }
+
+ } /* RunCmdPipe */
+
+ /*
+  * RunCmdPipeRecurse
+  *
+  * arguments:
+  *   commandTLinked *cmd: the list of piped commands
+  *   int fdPrevious[]: the pipe from the previous command (NULL for the first one)
+  *
+  * returns: none
+  *
+  * RunCmdPipeRecurse runs a list of piped commands and links their file descriptors
+  * such that the pipes behave as you would expect.
+  *
+  */
+static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
 {
-} /* RunCmdPipe */
+  int fd[2];
+  pid_t grandchild;
+
+  if (cmd->next != NULL)
+  {
+    pipe(fd);
+  }
+
+  if ((grandchild = fork()) == 0) // grandchild process
+  {
+    if (fdPrevious != NULL)
+    {
+      dup2(fdPrevious[0], STDIN_FILENO);
+      close(fdPrevious[0]);
+    }
+    if (cmd->next != NULL)
+    {
+      dup2(fd[1], STDOUT_FILENO);
+      close(fd[1]);
+      close(fd[0]);
+    }
+    execv(cmd->cmd->name, cmd->cmd->argv);
+    exit(1);
+  }
+  else if (grandchild > 0) // child process
+  {
+    if (fdPrevious != NULL)
+    {
+      close(fdPrevious[0]);
+    }
+    if (cmd->next != NULL)
+    {
+      close(fd[1]);
+      RunCmdPipeRecurse(cmd->next, fd);
+    }
+  }
+  else
+  {
+    perror("Fork Error");
+  }
+} /* RunCmdPipeRecurse */
+
+
+/*
+ * parsePipedCmd
+ *
+ * arguments:
+ *   commandT *cmd: the command to be parsed
+ *
+ * returns *commandTLinked: a linked list *commandT representing each piped command in reverse order (right to left)
+ *
+ * Takes a commandT* that has multiple piped commands and structures them into an array of individual commands
+ * This also reverses the order of the commands for use by RunCmdFork
+ */
+ static commandTLinked *parsePipedCmd(commandT* cmd)
+ {
+  int i = 0;
+  int i2 = 0;
+  int argc = 0;
+  char *argv;
+  commandTLinked *pipedCmdHead;
+  commandTLinked *pipedCmdCurrent = NULL;
+
+  for (i = cmd->argc - 1; i >= 0; i--)
+  {
+    if (strcmp(cmd->argv[i], "|") != 0)
+    {
+      // increase the argc for the current command and continue to the next argv
+      argc++;
+      continue;
+    }
+    // argv[i]  "|"
+    // the first time we have to set the new piped command to the head command
+    if (!pipedCmdCurrent)
+    {
+      pipedCmdHead = malloc(sizeof(commandTLinked));
+      pipedCmdCurrent = pipedCmdHead;
+      pipedCmdCurrent->next = NULL;
+    }
+    else
+    {
+      // for reverse order
+      // pipedCmdCurrent->next = malloc(sizeof(commandTLinked));
+      // pipedCmdCurrent = pipedCmdCurrent->next;
+      // for in order
+      pipedCmdCurrent = malloc(sizeof(commandTLinked));
+      pipedCmdCurrent->next = pipedCmdHead;
+      pipedCmdHead = pipedCmdCurrent;
+    }
+
+    pipedCmdCurrent->cmd = malloc(sizeof(commandT) + sizeof(char*) * (argc + 1));
+    pipedCmdCurrent->cmd->argc = argc;
+    for (i2 = 0; i2 < argc; i2++)
+    {
+      argv = malloc(sizeof(char) * (strlen(cmd->argv[i + 1 + i2]) + 1));
+      strcpy(argv, cmd->argv[i + 1 + i2]);
+      pipedCmdCurrent->cmd->argv[i2] = argv;
+      free(cmd->argv[i + 1 + i2]);
+    }
+    pipedCmdCurrent->cmd->argv[i2] = 0;
+    pipedCmdCurrent->cmd->name = pipedCmdCurrent->cmd->argv[0];
+    ResolveExternalCmd(pipedCmdCurrent->cmd);
+    free(cmd->argv[i]);
+    cmd->argv[i] = 0;
+    argc = 0;
+  }
+  // now add the first part of the cmd
+  // for reverse order
+  // pipedCmdCurrent->next = malloc(sizeof(commandTLinked *));
+  // pipedCmdCurrent = pipedCmdCurrent->next;
+  // epipedCmdCurrent->next = NULL;
+  // end for reverse order
+  // for in order
+  pipedCmdCurrent = malloc(sizeof(commandTLinked));
+  pipedCmdCurrent->next = pipedCmdHead;
+  pipedCmdHead = pipedCmdCurrent;
+  // end for in order
+  pipedCmdCurrent->cmd = cmd;
+  pipedCmdCurrent->cmd->argc = argc;
+  ResolveExternalCmd(pipedCmdCurrent->cmd);
+  pipedCmdCurrent = pipedCmdHead;
+
+  /*while (pipedCmdCurrent != NULL)
+  {
+    for (i = 0; i < pipedCmdCurrent->cmd->argc; i++)
+    {
+      printf("%s ", pipedCmdCurrent->cmd->argv[i]);
+    }
+    printf("\n");
+    pipedCmdCurrent = pipedCmdCurrent->next;
+  }*/
+
+  return pipedCmdHead;
+}
 
 
 /*
@@ -243,8 +424,8 @@ static void RunExternalCmd(commandT* cmd, char* cmdLine, bool fork)
  * Determines whether the command to be run actually exists.
  * If the command does not exist, cmd->name and cmd->argv[0] are set to NULL
  */
-static void ResolveExternalCmd(commandT* cmd)
-{
+ static void ResolveExternalCmd(commandT* cmd)
+ {
   int exists = fileExists(cmd->name);
   int i = 0, pathLength = 0;
   char *envPath;
@@ -358,7 +539,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         if (cmd->ioRedirect == IO_REDIRECT_OUT || cmd->ioRedirect == IO_REDIRECT_IN)
         {
           ioRedirectFile = open(cmd->ioRedirectPath,
-              ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
+            ((cmd->ioRedirect == IO_REDIRECT_OUT) ? O_WRONLY : O_RDONLY) | O_CREAT, 0644);
           if (ioRedirectFile == -1)
           {
             printf("Error opening file for io redirection. Error: %s\n", strerror(errno));
@@ -403,8 +584,8 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
  * Checks whether the given string corresponds to a supported built-in
  * command.
  */
-static bool IsBuiltIn(char* cmd)
-{
+ static bool IsBuiltIn(char* cmd)
+ {
   if (strchr(cmd, '='))
     return TRUE;
   else if (!strcmp(cmd, "echo"))
@@ -437,8 +618,8 @@ static bool IsBuiltIn(char* cmd)
  *
  * Runs a built-in command.
  */
-static void RunBuiltInCmd(commandT* cmd)
-{
+ static void RunBuiltInCmd(commandT* cmd)
+ {
   char *tmp;
   char *from;
   char *to;
@@ -590,7 +771,7 @@ static void RunBuiltInCmd(commandT* cmd)
   }
 } /* RunBuiltInCmd */
 
-static void setEnvVar(commandT* cmd) {
+ static void setEnvVar(commandT* cmd) {
   char *str = malloc(64 * sizeof(char));
   strcpy(str, cmd->argv[0]);
   putenv(str);
@@ -673,8 +854,8 @@ int KillFgProc(int signo)
  *
  * This function returns whether or not a file exists
  */
-static int fileExists(char *path)
-{
+ static int fileExists(char *path)
+ {
   FILE *file = fopen(path, "r");
   if (file)
   {
