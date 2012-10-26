@@ -732,7 +732,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
       return;
     if (!strcmp(alias->from, cmd->argv[1]))
       aliases = alias->next;
-    while(alias != NULL)
+    while(alias != NULL && alias->next != NULL)
     {
       if (!strcmp(alias->next->from, cmd->argv[1]))
       {
