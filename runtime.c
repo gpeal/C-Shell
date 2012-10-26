@@ -77,8 +77,8 @@ bgjobL *bgjobs = NULL;
 int fgJobPid = 0;
 char* fgJobCmd = NULL;
 
-/* All aliased commands * /
-extern Alias *aliases = NULL;
+/* All aliased commands */
+Alias *aliases = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
@@ -686,7 +686,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
       alias = aliases;
       while(alias)
       {
-        printf("%s=%s\n", alias->from, alias->to);
+        printf("alias %s='%s'\n", alias->from, alias->to);
         alias = alias->next;
       }
       return;
