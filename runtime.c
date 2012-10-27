@@ -750,9 +750,9 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     alias = alias->next;
     while (alias != NULL)
     {
-      if (strcmp(alias->from, cmd->argv[1]) == 0)
+      if (strcmp(alias->to, cmd->argv[1]) == 0)
       {
-        aliasPrevious = alias->next;
+        aliasPrevious->next = alias->next;
         free(alias);
         alias = aliasPrevious->next;
       }
