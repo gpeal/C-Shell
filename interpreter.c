@@ -126,7 +126,6 @@ void Interpret(char* cmdLine)
 commandT* getCommand(char* cmdLine)
 {
   Alias *alias;
-  char *aliasTmp;
   char *cmdLineWords[15];
   char *cmdLineRunnerHead;
   char *cmdLineRunnerTail;
@@ -185,6 +184,7 @@ commandT* getCommand(char* cmdLine)
   {
     strcat(cmdLine, " ");
     strcat(cmdLine, cmdLineWords[i]);
+    free(cmdLineWords[i]);
   }
   // printf("cmdLine: %s\n", cmdLine);
   

@@ -319,7 +319,7 @@ static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
   int i2 = 0;
   int argc = 0;
   char *argv;
-  commandTLinked *pipedCmdHead;
+  commandTLinked *pipedCmdHead = NULL;
   commandTLinked *pipedCmdCurrent = NULL;
 
   for (i = cmd->argc - 1; i >= 0; i--)
@@ -348,7 +348,6 @@ static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
       pipedCmdCurrent->next = pipedCmdHead;
       pipedCmdHead = pipedCmdCurrent;
     }
-
     pipedCmdCurrent->cmd = malloc(sizeof(commandT) + sizeof(char*) * (argc + 1));
     pipedCmdCurrent->cmd->argc = argc;
     for (i2 = 0; i2 < argc; i2++)
@@ -628,7 +627,6 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   char *to;
   Alias *alias;
   Alias *aliasPrevious;
-  Alias *aliastmp;
   if (strchr(cmd->name, '='))
     setEnvVar(cmd);
   else if (!strcmp(cmd->argv[0], "echo"))
