@@ -624,6 +624,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   char *from;
   char *to;
   Alias *alias;
+  Alias *aliasPrevious;
   Alias *aliastmp;
   if (strchr(cmd->name, '='))
     setEnvVar(cmd);
@@ -730,18 +731,35 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   {
     alias = aliases;
     if (alias == NULL || cmd->argc != 2)
-      return;
-    if (!strcmp(alias->from, cmd->argv[1]))
-      aliases = alias->next;
-    while(alias != NULL && alias->next != NULL)
     {
-      if (!strcmp(alias->next->from, cmd->argv[1]))
+      return;
+    }
+    // Check the first alias
+    if (strcmp(alias->to, cmd->argv[1]) == 0)
+    {
+      aliases = alias->next;
+      free(alias);
+      alias = aliases;
+    }
+    // if we removed the only alias, return now
+    if (aliases == NULL)
+    {
+      return;
+    }
+    aliasPrevious = alias;
+    alias = alias->next;
+    while (alias != NULL)
+    {
+      if (strcmp(alias->from, cmd->argv[1]) == 0)
       {
-        aliastmp = alias->next;
-        alias->next = alias->next->next;
-        free(aliastmp);
+        aliasPrevious = alias->next;
+        free(alias);
+        alias = aliasPrevious->next;
       }
-      alias = alias->next;
+      else
+      {
+        alias = alias->next;
+      }
     }
   }
   else if (!strcmp(cmd->argv[0], "bg"))
