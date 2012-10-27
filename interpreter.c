@@ -127,6 +127,10 @@ commandT* getCommand(char* cmdLine)
 {
   Alias *alias;
   char *aliasTmp;
+  char *cmdLineWords[15];
+  char *cmdLineRunnerHead;
+  char *cmdLineRunnerTail;
+  int cmdLineWord = 0;
   commandT* cmd = malloc(sizeof(commandT) + sizeof(char*) * MAXARGS);
   cmd->argv[0] = 0;
   cmd->name = 0;
@@ -137,28 +141,53 @@ commandT* getCommand(char* cmdLine)
   int i, inArg = 0;
   char quote = 0;
   char escape = 0;
-  //check aliases
-  alias = aliases;
-  while (alias != NULL)
+  cmdLineRunnerHead = cmdLine;
+  cmdLineRunnerTail = cmdLine;
+  // make an array with every word in the command
+  while(*cmdLineRunnerTail != '\0')
   {
-    if (strncmp(cmdLine, alias->from, strlen(alias->from)) == 0 && ((cmdLine[strlen(alias->from)] == ' ') || (cmdLine[strlen(alias->from)] == '\0')))
+    while(*cmdLineRunnerTail != ' ' && *cmdLineRunnerTail != '\0')
     {
-      aliasTmp = malloc(sizeof(char*) * BUFSIZE);
-      strcpy(aliasTmp, alias->to);
-      // only cat the rest of cmdLine if there was more of it
-      if (*(cmdLine + (sizeof(char) * strlen(alias->from))) != '\0')
-      {
-        strcat(aliasTmp, cmdLine + (sizeof(char) * strlen(alias->to)));
-      }
-      /*printf("Alias From: %s\n", alias->from);
-      printf("Alias To: %s\n", alias->to);
-      printf("cmdLine: %s->%s\n", cmdLine, aliasTmp);*/
-      strcpy(cmdLine, aliasTmp);
-      free(aliasTmp);
+      cmdLineRunnerTail++;
     }
-    alias = alias->next;
+    cmdLineWords[cmdLineWord] = malloc(sizeof(char) * (cmdLineRunnerTail - cmdLineRunnerHead + 1));
+    strncpy(cmdLineWords[cmdLineWord], cmdLineRunnerHead, (cmdLineRunnerTail - cmdLineRunnerHead));
+    // add the null terminator
+    cmdLineWords[cmdLineWord][cmdLineRunnerTail - cmdLineRunnerHead] = '\0';
+    cmdLineWord++;
+    if (*cmdLineRunnerTail != '\0')
+      cmdLineRunnerTail++;
+    cmdLineRunnerHead = cmdLineRunnerTail;
   }
 
+  // Replace all words with their aliases
+  for (i = 0; i < cmdLineWord; i++)
+  {
+    alias = aliases;
+    while (alias != NULL)
+    {
+      // printf("Comparing %s with %s\n", cmdLineWords[i], alias->from);
+      if (strlen(cmdLineWords[i]) == strlen(alias->from) && strcmp(cmdLineWords[i], alias->from) == 0)
+      {
+        // printf("Replacing %s with %s\n", alias->from, alias->to);
+        free(cmdLineWords[i]);
+        cmdLineWords[i] = malloc(sizeof(char) * (strlen(alias->to) + 1));
+        strcpy(cmdLineWords[i], alias->to);
+      }
+      alias = alias->next;
+    }
+  }
+
+  // Put the aliased words back in cmdLine
+  // set cmdLine to empty string
+  *cmdLine = '\0';
+  for (i = 0; i < cmdLineWord; i++)
+  {
+    strcat(cmdLine, " ");
+    strcat(cmdLine, cmdLineWords[i]);
+  }
+  // printf("cmdLine: %s\n", cmdLine);
+  
   // Set up the initial empty argument
   char* tmp = malloc(sizeof(char*) * BUFSIZE);
   int tmpLen = 0;

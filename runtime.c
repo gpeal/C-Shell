@@ -714,6 +714,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     if (aliases == NULL)
     {
       aliases = alias;
+      alias->next = NULL;
     }
     else
     {
