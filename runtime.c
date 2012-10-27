@@ -117,6 +117,8 @@ Alias *aliases = NULL;
  static int findBgJobPid(pid_t pid, bgjobL** job);
 /* finds a job in the bg job list by job number */
  static bgjobL *findBgJobNum(int jobNum);
+/* Removes an ampersand */
+static void removeAmpersand(char **cmdLineAddr);
 /************External Declaration*****************************************/
 extern commandT *copyCommand(commandT* cmd);
 extern void freeCommand(commandT* cmd);
@@ -219,7 +221,6 @@ void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
  void RunCmdPipe(commandTLinked* cmd)
  {
   pid_t child;
-  int status = -1;
   child = fork();
 
    if(child >= 0) // fork was successful
@@ -230,11 +231,8 @@ void RunCmdFork(commandT* cmd, char* cmdLine, bool fork)
           exit(1);
         } else //Parent process
         {
-          status = waitpid(child, &status, 0);
-          if(status == -1){
-            perror("Wait Fail");
-          }
-          status = WEXITSTATUS(status);
+          fgJobPid = child;
+          waitFg(child);
         }
       }
     else // fork failed
@@ -281,6 +279,8 @@ static void RunCmdPipeRecurse(commandTLinked *cmd, int fdPrevious[])
       close(fd[0]);
     }
     execv(cmd->cmd->name, cmd->cmd->argv);
+    free(cmd->cmd->argv);
+    free(cmd->cmd);
     exit(1);
   }
   else if (grandchild > 0) // child process
@@ -551,6 +551,8 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         }
 
         status = execv(cmd->name, cmd->argv);
+        free(cmd->name);
+        free(cmd->argv);
         if (ioRedirectFile != -1)
           close(ioRedirectFile);
       }
@@ -568,6 +570,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
   else // no fork
   {
     status = execv(cmd->name, cmd->argv);
+    free(cmd->name);
   }
 } /* Exec */
 
@@ -640,7 +643,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
         else
           printf("Environment variable %s is not set.\n", cmd->argv[1] + sizeof(char));
       }
-      else 
+      else
       {
         int i = 1;
         for (i = 1; i < cmd->argc; i++)
@@ -691,7 +694,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
       alias = aliases;
       while(alias)
       {
-        printf("%s=%s\n", alias->from, alias->to);
+        printf("alias %s='%s'\n", alias->from, alias->to);
         alias = alias->next;
       }
       return;
@@ -711,7 +714,7 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     strncpy(to, tmp, (strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char));
     from[(tmp - cmd->argv[1]) / sizeof(char) - 1] = '\0';
     to[(strlen(cmd->argv[1]) - (tmp - cmd->argv[1])) / sizeof(char)] = '\0';
-    alias = malloc(sizeof(Alias));
+    alias = malloc(sizeof(Alias *));
     if (aliases == NULL)
     {
       aliases = alias;
@@ -724,7 +727,6 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
     }
     alias->from = from;
     alias->to = to;
-    printf("Aliasing %s to %s\n", from, to);
 
   }
   else if (!strcmp(cmd->argv[0], "unalias"))
@@ -792,11 +794,16 @@ static void Exec(commandT* cmd, char* cmdLine, bool forceFork, bool bg)
 
     if(job != NULL)
     {
-      job->status = RUNNING;
       fgJobPid = job->pid;
+      // remove ampersands
+      removeAmpersand(&(job->cmdLine));
+    
       fgJobCmd = strndup(job->cmdLine, strlen(job->cmdLine));
       if (job->status != RUNNING)
+      {
+        job->status = RUNNING;
         kill(-1 * job->pid, SIGCONT);
+      }
       RmBgJobPid(job->pid);
       waitFg(fgJobPid);
       fflush(stdout);
@@ -905,9 +912,9 @@ int KillFgProc(int signo)
  * arguments pid_t pid: pid of bg process
  *           jobStatus status: status of the process
  *           commandT* command: the command struct from the call for this job
- *           
+ *
  * returns: none
- * 
+ *
  * This function adds the pid to the end of the bg job list
  * cmd will be freed when the job is freed so don't free it anywhere else!
  *
@@ -935,7 +942,7 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
     {
       job_i = job_i->next;
       i++;
-    }  
+    }
     job_i->next = new_bgjob;
   }
   if (new_bgjob->status == STOPPED)
@@ -949,18 +956,17 @@ void AddBgJob(pid_t pid, jobStatus status, char* cmdLine)
  * UpdateBgJob
  *
  * arguments pid_t pid: pid of process that has completed
- * 
+ *
  * returns: none
- * 
+ *
  * This function updates a bg job in the bg job list by pid
  *
  */
 void UpdateBgJob(pid_t pid, jobStatus status)
 {
   bgjobL* job;
-  int jobNum;
 
-  jobNum = findBgJobPid(pid, &job);
+  findBgJobPid(pid, &job);
 
   if (job != NULL)
   {
@@ -993,18 +999,17 @@ static void printJob(bgjobL* bgjob, int jobNum)
   }
   bgjob->changed = FALSE;
   printf("\t\t");
-  int len = strlen(bgjob->cmdLine);
+  //  int len = strlen(bgjob->cmdLine);
   if(bgjob->status == DONE)
   {
-    char* printcmd = calloc(len - 1, 1);
-    strncpy(printcmd, bgjob->cmdLine, len - 1);
-    printf("%s ", printcmd);
-    free(printcmd);
+    removeAmpersand(&(bgjob->cmdLine));
+    /* char* printcmd = calloc(len - 1, 1); */
+    /* strncpy(printcmd, bgjob->cmdLine, len - 1); */
+    /* printf("%s ", printcmd); */
+    /* free(printcmd); */
   }
-  else 
-  {
-    printf("%s ", bgjob->cmdLine);
-  }
+  printf("%s ", bgjob->cmdLine);
+
   printf("\n");
 }
 
@@ -1024,7 +1029,7 @@ void freeBgJob(bgjobL* job)
  *
  * arguments: pid_t child, the pid of the child proc
  *
- * returns: 
+ * returns:
  *
  * Waits for fg process to revert control.
  * Depends on  sigChldHandler handling job control
@@ -1055,7 +1060,7 @@ jobStatus toJobStatus(int status)
  * findBgJobPid
  *
  * returns the jobNumber, sets (*bgjobL) to NULL if job not found
- */ 
+ */
 int findBgJobPid(pid_t pid, bgjobL** job)
 {
   int i = 0;
@@ -1074,7 +1079,7 @@ static bgjobL *findBgJobNum(int jobNum)
 {
   int i = 1;
   bgjobL *job = bgjobs;
-  
+
   while (job != NULL && i <= jobNum)
   {
     if (jobNum == i)
@@ -1116,4 +1121,11 @@ void RmBgJobPid(pid_t pid)
     prev = job;
     job = job->next;
   }
+}
+
+void removeAmpersand(char **cmdLineAddr)
+{
+  char* tmp;
+  tmp = strsep(cmdLineAddr, "&");
+  *cmdLineAddr = tmp;
 }

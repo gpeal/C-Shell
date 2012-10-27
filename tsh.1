@@ -3,11 +3,13 @@
 .\"
 .TH TSH 1 "OCTOBER 2012" "NU EECS 343" "NU EECS 343 - Operating Systems - Fall 2012"
 .SH NAME
-tsh \- A tiny shell
+tsh \- A tiny shell that supports job control, pipes and file io!
 .SH SYNOPSIS
 .B tsh
 .SH DESCRIPTION
-.B tsh is an alternative shell written by Gabriel Peal that mimics much of the functionality of bash. In its current state, it can run any binary files by calling either their relative location or calling a binary on the PATH. tsh also has some built in functions (see below)
+.B tsh is an alternative shell written by Jonathan Friedman, Max New, and Gabriel Peal that mimics much of the functionality of bash. In its current state, it can run any binary files by calling either their relative location or calling a binary. It also can do file io, pipes, aliases, and dynamic prompts. 
+.SH GRADING
+.B There are several tests that should pass, but are not passing for some strange reason (even though the output is exactly the same). There are other tests that perform exactly the same funcionality as the reference, but are missing ampersands, and therefore fail the tests. We implemented the extra credit, but 3 of the tests do not pass even though they should due to formatting issues. One of the extra credits prints in a different order (it seems the reference prints in alphabetical order, ours prints in the reverse order of when the alias call was made), but our functionality is correct.
 .SH BUILT-IN COMMANDS
 .IP exit
 Quit tsh
@@ -19,7 +21,26 @@ Change the current directory
 tsh can set environment variables by using the same syntax as bash (ex. "VAR=foo")
 .IP PS1
 A user can reformat the command prompt name by setting the PS1 environment variable. \u is replaced with the current users username. \h is replaced with the first part of the computers hostname. \w is replaced with the current working directory. \t is replaced with the current time down to the second. (ex. PS1="[nu@nh:nw] nt % " will make the prompt look something like [fabianb@fabiansbox:/home/fabianb/tshell1] 23:14:16 %)
+.IP jobs
+Prints out a list of the current background jobs and their current states (Running, Stopped)
+.IP bg
+Given a job number, continues a stopped background job in the background.
+.IP fg
+Given a job number, continues a stopped background job and sets it as the current foreground job, that is, it waits for its completion.
+.IP alias
+A user can add dynamic aliases
+.IP unalias
+A user can remove aliases that he or she has previously entered
+.IP pipe character
+A user can pipe commands
+.IP > character
+A user can do file io
+.IP 
 .SH DESIGN APPROACH
-When the user enters a command, it is first converted to a commandT* data structure that contains the arguments and each of their parameters slit into an array. tsh then checks the command to see if it is built in (see above). If it is built in, it executes it and returns. If the command is not built in, it searches for a binary relative to the current directory (this can include subfolders). If it is not found, it checks to see if the path is an absolute path relative to root. If it is not, it checks every path in the PATH environment variable for the binary and executes that. When found, tsh executes the binary in a forked process and the parent waits for the child to die before continuing. This implementation of tsh does include the extra credit. Immediately after loading, it checks ~/.tshrc for a text file. If it is found, it loads every line that does not start with a # and interprets it as if the user had entered it. tsh also supports custom prompts using the PS1 environment variable (see above).
+When the user enters a command, it is first converted to a commandT* data structure that contains the arguments and each of their parameters slit into an array. tsh then checks the command to see if it is built in (see above). If it is built in, it executes it and returns. If the command is not built in, it searches for a binary relative to the current directory (this can include subfolders). If it is not found, it checks to see if the path is an absolute path relative to root. If it is not, it checks every path in the PATH environment variable for the binary and executes that. When found, tsh executes the binary in a forked process and the parent waits for the child to die before continuing. This implementation of tsh does include the extra credit. Immediately after loading, it checks ~/.tshrc for a text file. If it is found, it loads every line that does not start with a # and interprets it as if the user had entered it. tsh also supports custom prompts using the PS1 environment variable (see above). 
+
+The shell maintains a linked list of background jobs that hold the name, pid and original call for a job. When a foreground process is called, we enter a loop and when the process terminates we receive a SIGCHLD and we reap the process there. The bg, jobs and fg commands all simply require manipulation of the bg job list and calls to waitFg.
+
+The pipes are implemented by creating a pipe and forking a child. The child then waits for stdin from the parent. We implement aliases by creating a array of structs that dynamically replaces the command that was intended. 
 .SH AUTHOR
-Gabriel Peal, gpeal@u.northwestern.edu, gpe300
+Jonathan Friedman, friedmanj98@gmail.com, jmf716, Gabriel Peal, gpeal@u.northwestern.edu, gpe300, Max New, maxnew2013@u.northwestern.edu, msn688

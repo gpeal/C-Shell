@@ -39,7 +39,7 @@
 extern bgjobL *bgjobs;
 extern pid_t fgJobPid;
 extern char *fgJobCmd;
- 
+
 /************Function Prototypes******************************************/
 /* handles SIGINT, SIGSTOP signals */
 static void sig(int);
@@ -88,20 +88,28 @@ int main(int argc, char *argv[])
     //This is a hack to satisfy the test case. I apologize
     if (!strncmp(cmdLine, "exit", 4))
         break;
-    
+
     /* checks the status of background jobs */
     CheckJobs();
-    
+
     /* interpret command and line
      * includes executing of commands */
     Interpret(cmdLine);
 
   }
-  
+
   fflush(stdout);
   /* shell termination */
   free(fgJobCmd);
   free(cmdLine);
+  while(aliases)
+      {
+        free(aliases->from);
+        free(aliases->to);
+        Alias* tmp = aliases;
+        free(tmp);
+        aliases = aliases->next;
+      }
   if( bgjobs != NULL)
   {
     bgjobL *job, *tmp;
